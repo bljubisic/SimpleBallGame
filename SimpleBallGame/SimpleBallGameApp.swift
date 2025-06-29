@@ -6,29 +6,55 @@
 //
 
 import SwiftUI
+import RealityKit
 
 @main
 struct SimpleBallGameApp: App {
+    
+    @Environment(\.openImmersiveSpace) var openImmersiveSpace
 
-    @State private var appModel = AppModel()
-
-    var body: some Scene {
+    var body: some SwiftUI.Scene {
         WindowGroup {
-            ContentView()
-                .environment(appModel)
-        }
-        .windowStyle(.volumetric)
-
-        ImmersiveSpace(id: appModel.immersiveSpaceID) {
-            ImmersiveView()
-                .environment(appModel)
-                .onAppear {
-                    appModel.immersiveSpaceState = .open
+            VStack {
+                Text("Pick Your Difficulty")
+                    .font(.extraLargeTitle)
+                    .padding()
+                ForEach(AppModel.Level.allCases, id: \.self) { level in
+                    Button(action: {
+                        Task {
+                            await openImmersiveSpace(id: "something")
+                        }
+                    }, label: {
+                        Text(level.rawValue)
+                            .foregroundColor(.white)
+                            .frame(width: 100, height: 30) // Adjust width and height as needed
+                            .cornerRadius(10)
+                    })
                 }
-                .onDisappear {
-                    appModel.immersiveSpaceState = .closed
-                }
+            }
+        }.windowStyle(.automatic)
+        
+        ImmersiveSpace(id: "something") {
+            RealityView { content in
+                let sphereMesh = MeshResource.generateSphere(radius: 0.1)
+                let material = SimpleMaterial(
+                    color: .red,
+                    roughness: 0.3,
+                    isMetallic: false
+                )
+                let sphereEntity = ModelEntity(
+                    mesh: sphereMesh,
+                    materials: [material]
+                )
+                sphereEntity.position = SIMD3<Float>(0, 0, 0)
+                content.add(sphereEntity)
+                //                let spherePositions = generateNonIntersectingPositions()
+                //                // Create 10 spheres with random positions
+                //                for i in 0..<10 {
+                //                    let sphere = createSphere(index: i, position: spherePositions[i])
+                //                    content.add(sphere)
+                //                }
+            }
         }
-        .immersionStyle(selection: .constant(.mixed), in: .mixed)
     }
 }

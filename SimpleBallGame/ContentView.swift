@@ -16,9 +16,12 @@ struct ContentView: View {
     var body: some View {
         RealityView { content in
             // Add the initial RealityKit content
-            if let scene = try? await Entity(named: "Scene", in: realityKitContentBundle) {
-                content.add(scene)
-            }
+            let sphereMash = MeshResource.generateSphere(radius: 0.1)
+            let material = SimpleMaterial(color: .blue, isMetallic: true)
+            let sphere = ModelEntity(mesh: sphereMash, materials: [material])
+            sphere.position = SIMD3<Float>(0, 0, -0.2)
+            
+            content.add(sphere)
         } update: { content in
             // Update the RealityKit content when SwiftUI state changes
             if let scene = content.entities.first {
@@ -29,21 +32,6 @@ struct ContentView: View {
         .gesture(TapGesture().targetedToAnyEntity().onEnded { _ in
             enlarge.toggle()
         })
-        .toolbar {
-            ToolbarItemGroup(placement: .bottomOrnament) {
-                VStack (spacing: 12) {
-                    Button {
-                        enlarge.toggle()
-                    } label: {
-                        Text(enlarge ? "Reduce RealityView Content" : "Enlarge RealityView Content")
-                    }
-                    .animation(.none, value: 0)
-                    .fontWeight(.semibold)
-
-                    ToggleImmersiveSpaceButton()
-                }
-            }
-        }
     }
 }
 
