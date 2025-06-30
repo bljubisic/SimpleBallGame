@@ -7,7 +7,11 @@
 import SwiftUI
 
 struct LevelSelectView: View {
-    @Binding var selectedLevel: String?
+    
+    @Environment(\.openImmersiveSpace) var openImmersiveSpace
+    @Binding var selectedLevel: AppModel.Level?
+    
+    @Binding var game: Game?
     let difficulty = ["Easy", "Medium", "Hard"]
     
     var body : some View {
@@ -18,7 +22,11 @@ struct LevelSelectView: View {
                     .padding()
                 ForEach(AppModel.Level.allCases, id: \.self) { level in
                     Button(action: {
-                        selectedLevel = level.rawValue
+                        Task {
+                            selectedLevel = level
+                            game = Game(level: selectedLevel ?? .easy, subLevel: 1)
+                            await openImmersiveSpace(id: "something")
+                        }
                     }, label: {
                         Text(level.rawValue)
                             .foregroundColor(.white)
@@ -33,7 +41,8 @@ struct LevelSelectView: View {
 
 #Preview(windowStyle: .volumetric) {
     
-    @Previewable @State var selectedLevel: String? = "Easy"
-    LevelSelectView(selectedLevel: $selectedLevel)
+    @Previewable @State var selectedLevel: AppModel.Level? = .easy
+    @Previewable @State var game: Game? = Game()
+    LevelSelectView(selectedLevel: $selectedLevel, game: $game)
         .environment(AppModel())
 }

@@ -9,41 +9,107 @@ import RealityKit
 
 
 struct GameView: View {
-    @State var selectedLevel: String?
-    @Environment (\.openImmersiveSpace) var openImmersiveSpace
+    @Binding var selectedLevel: AppModel.Level?
+    @Environment(\.openImmersiveSpace) var openImmersiveSpace
+    @Binding var game: Game?
+    @Binding var currentGame: CurrentGameState?
+
     
     var body: some View {
-//        if selectedLevel != nil {
-
-//        }
-//        else {
-//            LevelSelectView(selectedLevel: $selectedLevel)
-//        }
+        RealityView { content in
+            currentGame = CurrentGameState(game: game!)
+            let spherePositions = generateNonIntersectingPositions()
+            // Create 10 spheres with random positions
+            let anchor = AnchorEntity(.head, trackingMode: .once)
+            let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel ?? .easy] ?? 1) + currentGame!.game.subLevel) - 1
+            let colors = generateRandomColors(selectedLevel: selectedLevel ?? .easy)
+            print(colors)
+            for i in 0..<numberOfBalls  {
+                let touple = createSphere(index: i, position: spherePositions[i], useColors: colors)
+                let sphere = touple.0
+                let color = touple.1
+                let ballModel = BallModel(id: UUID(), position: sphere.position, pickedUp: false, color: color)
+                currentGame!.ballModels.append(ballModel)
+                anchor.addChild(sphere)
+            }
+            content.add(anchor)
+        }
     }
     
-    func generateNonIntersectingPositions() -> [SIMD3<Float>] {
+    func generateRandomColors(selectedLevel: AppModel.Level) -> [UIColor] {
+        var colors: [UIColor] = []
+        let maxAttempts = 10000 // Prevent infinite loops
+        let minColorDistance: Float = 0.3 // Minimum distance between colors in RGB space
+        let numberOfColors = BASE_NUMBER_OF_COLORS * (levelMultiplier[selectedLevel] ?? 1)
+        
+        while colors.count < numberOfColors {
+            var attempts = 0
+            var validColor = false
+            var newColor = UIColor.black
+            
+            while !validColor && attempts < maxAttempts {
+                // Generate random color
+                let red = Float.random(in: 0.2...1.0)
+                let green = Float.random(in: 0.2...1.0)
+                let blue = Float.random(in: 0.2...1.0)
+                
+                newColor = UIColor(red: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: 1.0)
+                
+                // Check if this color is sufficiently different from existing colors
+                validColor = true
+                for existingColor in colors {
+                    if let existingComponents = existingColor.cgColor.components,
+                       existingComponents.count >= 3 {
+                        let existingRed = Float(existingComponents[0])
+                        let existingGreen = Float(existingComponents[1])
+                        let existingBlue = Float(existingComponents[2])
+                        
+                        // Calculate Euclidean distance in RGB space
+                        let distance = sqrt(pow(red - existingRed, 2) +
+                                          pow(green - existingGreen, 2) +
+                                          pow(blue - existingBlue, 2))
+                        
+                        if distance < minColorDistance {
+                            validColor = false
+                            break
+                        }
+                    }
+                }
+                attempts += 1
+            }
+            
+            colors.append(newColor)
+        }
+        
+        return colors
+    }
+    
+    private func generateNonIntersectingPositions() -> [SIMD3<Float>] {
         var positions: [SIMD3<Float>] = []
         let sphereRadius: Float = 0.1 // 10cm radius
         let minDistance = sphereRadius * 2.1 // Minimum distance between sphere centers (with small buffer)
         
-        // Volumetric space bounds (2x2x2 meters, so -1 to 1 on each axis)
-        // Account for sphere radius to keep spheres fully inside
-        let boundMin: Float = 0.0 + sphereRadius
-        let boundMax: Float = 1.0 - sphereRadius
+        // Position spheres approximately 1 meter in front of user
+        // Create a semicircle/hemisphere pattern in front of the head
+        let baseDistance: Float = 1.0 // 1 meter forward
+        let spreadRadius: Float = 0.4 // 40cm spread radius around the forward point
         
         let maxAttempts = 1000 // Prevent infinite loops
         
-        for index in 0..<10 {
+        for _ in 0..<(BASE_BALLS_NUM * (levelMultiplier[selectedLevel ?? .easy] ?? 1) + currentGame!.game.subLevel) - 1 {
             var attempts = 0
             var validPosition = false
             var newPosition = SIMD3<Float>(0, 0, 0)
             
             while !validPosition && attempts < maxAttempts {
-                // Generate random position within safe bounds
+                // Generate random position in a hemisphere in front of user
+                // X: left-right spread
+                // Y: up-down spread (slightly biased upward)
+                // Z: forward distance with some variation
                 newPosition = SIMD3<Float>(
-                    Float.random(in: boundMin...boundMax),
-                    Float.random(in: boundMin...boundMax),
-                    Float.random(in: boundMin...boundMax)
+                    Float.random(in: -spreadRadius...spreadRadius), // Left-right
+                    Float.random(in: -spreadRadius/2...spreadRadius), // Slightly up-biased
+                    -baseDistance + Float.random(in: -0.2...0.2) // 1m forward ± 20cm
                 )
                 
                 // Check if this position is far enough from all existing spheres
@@ -57,20 +123,20 @@ struct GameView: View {
                 }
                 attempts += 1
             }
-            print("\(index), \(newPosition)")
+            
             positions.append(newPosition)
         }
         
         return positions
     }
     
-    func createSphere(index: Int, position: SIMD3<Float>) -> Entity {
+    private func createSphere(index: Int, position: SIMD3<Float>, useColors: [UIColor]) -> (Entity, UIColor) {
         // Create sphere mesh with 10cm radius (0.1 meters)
         let sphereMesh = MeshResource.generateSphere(radius: 0.1)
-        
+        let color = useColors.randomElement()!
         // Create material with random color
         let material = SimpleMaterial(
-            color: randomColor(),
+            color: color,
             roughness: 0.3,
             isMetallic: false
         )
@@ -103,20 +169,18 @@ struct GameView: View {
             sphereEntity.playAnimation(animationResource)
         }
         
-        return sphereEntity
+        return (sphereEntity, color)
     }
     
-    func randomColor() -> UIColor {
-        return UIColor(
-            red: CGFloat.random(in: 0.2...1.0),
-            green: CGFloat.random(in: 0.2...1.0),
-            blue: CGFloat.random(in: 0.2...1.0),
-            alpha: 1.0
-        )
-    }
+//    private func randomColor() -> UIColor {
+//        return colors.randomElement()!
+//    }
 }
 
 #Preview(windowStyle: .volumetric) {
-    GameView()
+    @Previewable @State var selectedLevel: AppModel.Level? = .easy
+    @Previewable @State var game: Game? = Game()
+    @Previewable @State var currentGame: CurrentGameState? = CurrentGameState()
+    GameView(selectedLevel: $selectedLevel, game: $game, currentGame: $currentGame)
         .environment(AppModel())
 }
