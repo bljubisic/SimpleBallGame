@@ -16,7 +16,7 @@ struct GameView: View {
 
     
     var body: some View {
-        RealityView { content in
+        RealityView { content, attachments in
             currentGame = CurrentGameState(game: game!)
             let spherePositions = generateNonIntersectingPositions()
             // Create 10 spheres with random positions
@@ -33,6 +33,17 @@ struct GameView: View {
                 anchor.addChild(sphere)
             }
             content.add(anchor)
+            if let instructions = attachments.entity(for: "Instructions") {
+                instructions.position.z -= 1
+                instructions.position.y += 1.8
+                instructions.position.x += 0.9
+                
+                content.add(instructions)
+            }
+        } attachments: {
+            Attachment(id: "Instructions") {
+                Text("Remove all balls with same color!!")
+            }
         }
     }
     
@@ -92,7 +103,7 @@ struct GameView: View {
         // Position spheres approximately 1 meter in front of user
         // Create a semicircle/hemisphere pattern in front of the head
         let baseDistance: Float = 1.0 // 1 meter forward
-        let spreadRadius: Float = 0.4 // 40cm spread radius around the forward point
+        let spreadRadius: Float = 0.5 // 40cm spread radius around the forward point
         
         let maxAttempts = 1000 // Prevent infinite loops
         
@@ -179,8 +190,8 @@ struct GameView: View {
 
 #Preview(windowStyle: .volumetric) {
     @Previewable @State var selectedLevel: AppModel.Level? = .easy
-    @Previewable @State var game: Game? = Game()
-    @Previewable @State var currentGame: CurrentGameState? = CurrentGameState()
+    @Previewable @State var game: Game? = Game(level: .easy, subLevel: 1)
+    @Previewable @State var currentGame: CurrentGameState? = CurrentGameState(game: Game(level: .easy, subLevel: 1))
     GameView(selectedLevel: $selectedLevel, game: $game, currentGame: $currentGame)
         .environment(AppModel())
 }
