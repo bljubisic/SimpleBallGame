@@ -242,7 +242,7 @@ extension Entity {
         let particleCount = 50
         let explosionForce: Float = 2.0
         
-        for i in 0..<particleCount {
+        for _ in 0..<particleCount {
             // Create small particle
             let particleMesh = MeshResource.generateSphere(radius: 0.01)
             var particleMaterial = SimpleMaterial()
