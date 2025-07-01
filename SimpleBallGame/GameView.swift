@@ -223,6 +223,14 @@ struct GameView: View {
             sphereEntity.playAnimation(animationResource)
         }
         
+        let hoverComponent = HoverEffectComponent(.spotlight(
+            HoverEffectComponent.SpotlightHoverEffectStyle(
+                color: color, strength: 2.0
+            )
+        ))
+        
+        sphereEntity.components.set(hoverComponent)
+        
         return (sphereEntity, color)
     }
     
