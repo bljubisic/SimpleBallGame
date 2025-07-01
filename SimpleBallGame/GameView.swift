@@ -9,6 +9,7 @@ import RealityKit
 
 
 struct GameView: View {
+    @State private var selectedSpheres: Set<String> = []
     @Binding var selectedLevel: AppModel.Level?
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
     @Binding var game: Game?
@@ -16,19 +17,21 @@ struct GameView: View {
 
     
     var body: some View {
+
         RealityView { content, attachments in
             currentGame = CurrentGameState(game: game!)
             let spherePositions = generateNonIntersectingPositions()
-            // Create 10 spheres with random positions
-            let anchor = AnchorEntity(.head, trackingMode: .once)
             let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel ?? .easy] ?? 1) + currentGame!.game.subLevel) - 1
             let colors = generateRandomColors(selectedLevel: selectedLevel ?? .easy)
-            print(colors)
+//            print(colors)
+            // Create 10 spheres with random positions
+            let anchor = AnchorEntity(.head, trackingMode: .once)
             for i in 0..<numberOfBalls  {
                 let touple = createSphere(index: i, position: spherePositions[i], useColors: colors)
                 let sphere = touple.0
                 let color = touple.1
-                let ballModel = BallModel(id: UUID(), position: sphere.position, pickedUp: false, color: color)
+                let uuid = UUID(uuidString: sphere.name)!
+                let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color)
                 currentGame!.ballModels.append(ballModel)
                 anchor.addChild(sphere)
             }
@@ -40,10 +43,49 @@ struct GameView: View {
                 
                 content.add(instructions)
             }
-        } attachments: {
+        } update: { content, _  in
+            if let headAnchor = content.entities.first {
+                for (_, child) in headAnchor.children.enumerated() {
+                    if let modelEntity = child as? ModelEntity {
+                        updateSphereAppearance(modelEntity, isSelected: selectedSpheres.contains(modelEntity.name))
+                    }
+                }
+            }
+        }
+        attachments: {
             Attachment(id: "Instructions") {
                 Text("Remove all balls with same color!!")
             }
+        }
+        .gesture(
+            TapGesture()
+                .targetedToAnyEntity()
+                .onEnded { value in
+                    handleSphereSelection(value.entity)
+                }
+        )
+
+    }
+    
+    func updateSphereAppearance(_ modelEntity: ModelEntity, isSelected: Bool) {
+         if isSelected {
+             // Selected state: brighter, slightly larger, with glow
+             modelEntity.transform.scale = SIMD3<Float>(1.2, 1.2, 1.2)
+
+         } else {
+             // Normal state
+             modelEntity.transform.scale = SIMD3<Float>(1.0, 1.0, 1.0)
+             
+         }
+     }
+    
+    func handleSphereSelection(_ entity: Entity) {
+            
+        // Toggle selection state
+        if selectedSpheres.contains(entity.name) {
+            selectedSpheres.remove(entity.name)
+        } else {
+            selectedSpheres.insert(entity.name)
         }
     }
     
@@ -160,6 +202,7 @@ struct GameView: View {
         
         // Set the pre-calculated position
         sphereEntity.position = position
+        sphereEntity.name = UUID().uuidString
         
         // Add some physics for interaction
         sphereEntity.components.set(CollisionComponent(shapes: [.generateSphere(radius: 0.1)]))
