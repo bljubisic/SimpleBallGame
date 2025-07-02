@@ -11,20 +11,30 @@ import RealityKitContent
 
 struct GameView: View {
     @State private var selectedSpheres: Set<String> = []
+    @State var textColor: UIColor = .white
+    @State var numberOfBalls: Int = 0
+    @State var colors: [UIColor] = []
+    @State var spherePositions: [SIMD3<Float>] = []
     @Binding var selectedLevel: AppModel.Level?
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
     @Binding var game: Game?
     @Binding var currentGame: CurrentGameState?
-
+    
+    @ObservedObject var stopWatch = StopWatch()
     
     var body: some View {
-
+        let minutes = String(format: "%02d", stopWatch.counter / 60)
+        let seconds = String(format: "%02d", stopWatch.counter % 60)
+        let union = minutes + " : " + seconds
+//        var currentGame = setupTheGame()
+        
         RealityView { content, attachments in
-            currentGame = CurrentGameState(game: game!)
+            guard let game = self.game, let selectedLevel = self.selectedLevel else { return }
+            currentGame = CurrentGameState(game: game)
+            guard var currentGame = currentGame else { return }
             let spherePositions = generateNonIntersectingPositions()
-            let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel ?? .easy] ?? 1) + currentGame!.game.subLevel) - 1
-            let colors = generateRandomColors(selectedLevel: selectedLevel ?? .easy)
-//            print(colors)
+            let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1
+            let colors = generateRandomColors(selectedLevel: selectedLevel)
             // Create 10 spheres with random positions
             let anchor = AnchorEntity(.head, trackingMode: .once)
             for i in 0..<numberOfBalls  {
@@ -33,8 +43,14 @@ struct GameView: View {
                 let color = touple.1
                 let uuid = UUID(uuidString: sphere.name)!
                 let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color)
-                currentGame!.ballModels.append(ballModel)
+                currentGame.ballModels.append(ballModel)
                 anchor.addChild(sphere)
+            }
+            let usedColors: [UIColor] = currentGame.ballModels.reduce([]) { result, ballModel in
+                result.contains(ballModel.color) ? result : result + [ballModel.color]
+            }
+            if let firstColor = usedColors.first {
+                textColor = firstColor
             }
             content.add(anchor)
             if let instructions = attachments.entity(for: "Instructions") {
@@ -46,13 +62,29 @@ struct GameView: View {
             }
         } attachments: {
             Attachment(id: "Instructions") {
-                Text("Remove all balls with same color!!")
+                VStack {
+                    HStack {
+                        Text("Remove all balls with ")
+                            .font(.title)
+                        Text("this color!!")
+                            .foregroundColor(Color(textColor))
+                            .font(.title)
+                    }
+                    .padding()
+                    Text("Time lapsed: \(union)")
+                        .font(.title)
+                        .padding()
+                }
+
             }
         }
         .gesture(
             TapGesture()
                 .targetedToAnyEntity()
                 .onEnded { value in
+                    if stopWatch.counter == 0 {
+                        stopWatch.start()
+                    }
                     value.entity.explode()
                 }
         )

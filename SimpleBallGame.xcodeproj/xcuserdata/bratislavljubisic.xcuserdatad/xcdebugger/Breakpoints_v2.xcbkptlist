@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "76045369-7D5E-45B4-B0CA-AA02CC878CFD"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "8DE010E9-6259-4556-9DB5-B8F107D70AF5"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimpleBallGame/GameView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "33"
+            endingLineNumber = "33"
+            landmarkName = "body"
+            landmarkType = "24">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "0397373C-942B-4F23-9EF0-78A22867A613"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimpleBallGame/GameView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "49"
+            endingLineNumber = "49"
+            landmarkName = "body"
+            landmarkType = "24">
+            <Locations>
+               <Location
+                  uuid = "0397373C-942B-4F23-9EF0-78A22867A613 - 47c028ca724463fc"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for closure #1 @Swift.MainActor @Sendable (inout _RealityKit_SwiftUI.RealityViewContent, _RealityKit_SwiftUI.RealityViewAttachments) async -&gt; () in SimpleBallGame.GameView.body.getter : some"
+                  moduleName = "SimpleBallGame.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/bratislavljubisic/Developer/SimpleBallGame/SimpleBallGame/GameView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "49"
+                  endingLineNumber = "49">
+               </Location>
+               <Location
+                  uuid = "0397373C-942B-4F23-9EF0-78A22867A613 - 783ae894be2eac19"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.Array&lt;__C.UIColor&gt;, SimpleBallGame.BallModel) -&gt; Swift.Array&lt;__C.UIColor&gt; in closure #1 @Swift.MainActor @Sendable (inout _RealityKit_SwiftUI.RealityViewContent, _RealityKit_SwiftUI.RealityViewAttachments) async -&gt; () in SimpleBallGame.GameView.body.getter : some"
+                  moduleName = "SimpleBallGame.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/bratislavljubisic/Developer/SimpleBallGame/SimpleBallGame/GameView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "49"
+                  endingLineNumber = "49">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "33B6EAC3-6F9C-46C6-B9E8-6C4C1E5419E7"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimpleBallGame/GameView.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "52"
+            endingLineNumber = "52"
+            landmarkName = "body"
+            landmarkType = "24">
+            <Locations>
+               <Location
+                  uuid = "33B6EAC3-6F9C-46C6-B9E8-6C4C1E5419E7 - 47c028ca7244605f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for closure #1 @Swift.MainActor @Sendable (inout _RealityKit_SwiftUI.RealityViewContent, _RealityKit_SwiftUI.RealityViewAttachments) async -&gt; () in SimpleBallGame.GameView.body.getter : some"
+                  moduleName = "SimpleBallGame.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/bratislavljubisic/Developer/SimpleBallGame/SimpleBallGame/GameView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "52"
+                  endingLineNumber = "52">
+               </Location>
+               <Location
+                  uuid = "33B6EAC3-6F9C-46C6-B9E8-6C4C1E5419E7 - 47c028ca7244605f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for closure #1 @Swift.MainActor @Sendable (inout _RealityKit_SwiftUI.RealityViewContent, _RealityKit_SwiftUI.RealityViewAttachments) async -&gt; () in SimpleBallGame.GameView.body.getter : some"
+                  moduleName = "SimpleBallGame.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/bratislavljubisic/Developer/SimpleBallGame/SimpleBallGame/GameView.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "52"
+                  endingLineNumber = "52">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

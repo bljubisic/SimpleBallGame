@@ -40,6 +40,7 @@ struct Game {
     let level: AppModel.Level
     let subLevel: Int
     let keptTimePerLevel: [String: TimeInterval]
+    let colors: [UIColor]
 }
 
 extension Game {
@@ -47,12 +48,14 @@ extension Game {
         self.level = .easy
         self.subLevel = 0
         self.keptTimePerLevel = [:]
+        self.colors = []
     }
     
     init(level: AppModel.Level, subLevel: Int) {
         self.level = level
         self.subLevel = subLevel
         self.keptTimePerLevel = [:]
+        self.colors = []
     }
 }
 
