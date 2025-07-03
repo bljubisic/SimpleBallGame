@@ -85,6 +85,11 @@ struct GameView: View {
                     if stopWatch.counter == 0 {
                         stopWatch.start()
                     }
+                    let name = value.entity.name
+                    let ballModel = currentGame?.ballModels.filter{ ballModel in ballModel.id.uuidString == name}.first
+                    if let ballModel = ballModel {
+                        BallModel.ballModelPickedUpLens.set(true, ballModel)
+                    }
                     value.entity.explode()
                 }
         )

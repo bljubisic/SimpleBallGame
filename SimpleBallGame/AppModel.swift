@@ -36,6 +36,15 @@ struct BallModel {
     
 }
 
+extension BallModel {
+    static let ballModelPickedUpLens = Lens<BallModel, Bool>(
+        get: { $0.pickedUp },
+        set: { pickedUp, ballModel in
+            BallModel(id: ballModel.id, position: ballModel.position, pickedUp: pickedUp, color: ballModel.color)
+        }
+    )
+}
+
 struct Game {
     let level: AppModel.Level
     let subLevel: Int
@@ -75,3 +84,10 @@ extension CurrentGameState {
         self.ballModels = []
     }
 }
+
+struct Lens<Whole, Part> {
+    let get: (Whole) -> Part
+    let set: (Part, Whole) -> Whole
+}
+
+
