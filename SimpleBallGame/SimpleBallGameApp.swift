@@ -10,12 +10,11 @@ import RealityKit
 
 @main
 struct SimpleBallGameApp: App {
-    @State var selectedLevel: AppModel.Level? = nil
+    @State var selectedLevel: AppModel.Level = .easy
     @State private var gameImmersionStyle: ImmersionStyle = .mixed
     
-    @State var game: Game?
-    @State var currentGame: CurrentGameState?
-
+    @State var game: Game = Game()
+    @State var currentGame: CurrentGameState = CurrentGameState()
     var body: some SwiftUI.Scene {
         WindowGroup(id: "levelSelection") {
             LevelSelectView(selectedLevel: $selectedLevel, game: $game)

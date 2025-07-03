@@ -15,10 +15,10 @@ struct GameView: View {
     @State var numberOfBalls: Int = 0
     @State var colors: [UIColor] = []
     @State var spherePositions: [SIMD3<Float>] = []
-    @Binding var selectedLevel: AppModel.Level?
+    @Binding var selectedLevel: AppModel.Level
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
-    @Binding var game: Game?
-    @Binding var currentGame: CurrentGameState?
+    @Binding var game: Game
+    @Binding var currentGame: CurrentGameState
     
     @ObservedObject var stopWatch = StopWatch()
     
@@ -29,9 +29,7 @@ struct GameView: View {
 //        var currentGame = setupTheGame()
         
         RealityView { content, attachments in
-            guard let game = self.game, let selectedLevel = self.selectedLevel else { return }
             currentGame = CurrentGameState(game: game)
-            guard var currentGame = currentGame else { return }
             let spherePositions = generateNonIntersectingPositions()
             let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1
             let colors = generateRandomColors(selectedLevel: selectedLevel)
@@ -86,7 +84,7 @@ struct GameView: View {
                         stopWatch.start()
                     }
                     let name = value.entity.name
-                    let ballModel = currentGame?.ballModels.filter{ ballModel in ballModel.id.uuidString == name}.first
+                    let ballModel = currentGame.ballModels.filter{ ballModel in ballModel.id.uuidString == name}.first
                     if let ballModel = ballModel {
                         BallModel.ballModelPickedUpLens.set(true, ballModel)
                     }
@@ -178,7 +176,7 @@ struct GameView: View {
         
         let maxAttempts = 1000 // Prevent infinite loops
         
-        for _ in 0..<(BASE_BALLS_NUM * (levelMultiplier[selectedLevel ?? .easy] ?? 1) + currentGame!.game.subLevel) - 1 {
+        for _ in 0..<(BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1 {
             var attempts = 0
             var validPosition = false
             var newPosition = SIMD3<Float>(0, 0, 0)
@@ -354,9 +352,9 @@ extension Entity {
 }
 
 #Preview(windowStyle: .volumetric) {
-    @Previewable @State var selectedLevel: AppModel.Level? = .easy
-    @Previewable @State var game: Game? = Game(level: .easy, subLevel: 1)
-    @Previewable @State var currentGame: CurrentGameState? = CurrentGameState(game: Game(level: .easy, subLevel: 1))
+    @Previewable @State var selectedLevel: AppModel.Level = .easy
+    @Previewable @State var game: Game = Game(level: .easy, subLevel: 1)
+    @Previewable @State var currentGame: CurrentGameState = CurrentGameState(game: Game(level: .easy, subLevel: 1))
     GameView(selectedLevel: $selectedLevel, game: $game, currentGame: $currentGame)
         .environment(AppModel())
 }
