@@ -30,19 +30,12 @@ struct GameView: View {
         
         RealityView { content, attachments in
             currentGame = CurrentGameState(game: game)
-            let spherePositions = generateNonIntersectingPositions()
             let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1
-            let colors = generateRandomColors(selectedLevel: selectedLevel)
             // Create 10 spheres with random positions
+            currentGame = CurrentGameState.currentGameBallModelsLens.set(createBallModels(for: game.level, and: game.subLevel), currentGame)
             let anchor = AnchorEntity(.head, trackingMode: .once)
             for i in 0..<numberOfBalls  {
-                let touple = createSphere(index: i, position: spherePositions[i], useColors: colors)
-                let sphere = touple.0
-                let color = touple.1
-                let uuid = UUID(uuidString: sphere.name)!
-                let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color)
-                currentGame.ballModels.append(ballModel)
-                anchor.addChild(sphere)
+                anchor.addChild(currentGame.ballModels[i].sphere)
             }
             let usedColors: [UIColor] = currentGame.ballModels.reduce([]) { result, ballModel in
                 result.contains(ballModel.color) ? result : result + [ballModel.color]
@@ -85,13 +78,50 @@ struct GameView: View {
                     }
                     let name = value.entity.name
                     let ballModel = currentGame.ballModels.filter{ ballModel in ballModel.id.uuidString == name}.first
-                    if let ballModel = ballModel {
-                        BallModel.ballModelPickedUpLens.set(true, ballModel)
+                    if var ballModel = ballModel {
+                        ballModel = BallModel.ballModelPickedUpLens.set(true, ballModel)
+                        value.entity.explode(color: ballModel.color)
+                        if ballModel.color == textColor {
+                            currentGame.ballModels.removeAll(where: { $0.id == ballModel.id })
+                            let numberOfBallsLeft = currentGame.ballModels.filter{sphere in sphere.color == textColor}.count
+                            if numberOfBallsLeft == 0 {
+                                print(numberOfBallsLeft, currentGame.game.subLevel)
+                                if currentGame.game.subLevel < 10 {
+                                    let subLevel = game.subLevel + 1
+                                    game = Game.gameSubLevelLens.set(subLevel, game)
+                                    currentGame = CurrentGameState.currentGameGameLens.set(game, CurrentGameState())
+                                    currentGame = CurrentGameState.currentGameBallModelsLens.set(createBallModels(for: game.level, and: game.subLevel), currentGame)
+                                } else {
+                                    if (currentGame.game.level == .easy) {
+                                        let timePerLevel = currentGame.game.keptTimePerLevel
+                                        game = Game(level: .medium, subLevel: 1)
+                                        game = Game.gameTimePerLevelLens.set(timePerLevel, game)
+                                        currentGame = CurrentGameState.currentGameBallModelsLens.set(createBallModels(for: game.level, and: game.subLevel), currentGame)
+                                    }
+                                }
+                            }
+                        }
                     }
-                    value.entity.explode()
                 }
         )
 
+    }
+    
+    func createBallModels(for level: AppModel.Level, and subLevel: Int) -> [BallModel] {
+        let colors = generateRandomColors(selectedLevel: level)
+        
+        var ballModels = [] as [BallModel]
+        let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1
+        let positions = generateNonIntersectingPositions(for: numberOfBalls)
+        for i in 0 ..< numberOfBalls {
+            let color = colors.randomElement() ?? .white
+            let sphere = createSphere(index: i, position: positions[i], useColor: color)
+            let uuid = UUID(uuidString: sphere.name)!
+            let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color, sphere: sphere)
+            currentGame.ballModels.append(ballModel)
+            ballModels.append(ballModel)
+        }
+        return ballModels
     }
     
     func updateSphereAppearance(_ modelEntity: ModelEntity, isSelected: Bool) {
@@ -164,7 +194,7 @@ struct GameView: View {
         return colors
     }
     
-    private func generateNonIntersectingPositions() -> [SIMD3<Float>] {
+    private func generateNonIntersectingPositions(for numberOfSpheres: Int) -> [SIMD3<Float>] {
         var positions: [SIMD3<Float>] = []
         let sphereRadius: Float = 0.1 // 10cm radius
         let minDistance = sphereRadius * 2.1 // Minimum distance between sphere centers (with small buffer)
@@ -176,7 +206,7 @@ struct GameView: View {
         
         let maxAttempts = 1000 // Prevent infinite loops
         
-        for _ in 0..<(BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1 {
+        for _ in 0..<numberOfSpheres {
             var attempts = 0
             var validPosition = false
             var newPosition = SIMD3<Float>(0, 0, 0)
@@ -210,13 +240,12 @@ struct GameView: View {
         return positions
     }
     
-    private func createSphere(index: Int, position: SIMD3<Float>, useColors: [UIColor]) -> (Entity, UIColor) {
+    private func createSphere(index: Int, position: SIMD3<Float>, useColor: UIColor) -> Entity {
         // Create sphere mesh with 10cm radius (0.1 meters)
         let sphereMesh = MeshResource.generateSphere(radius: 0.1)
-        let color = useColors.randomElement()!
         // Create material with random color
         let material = SimpleMaterial(
-            color: color,
+            color: useColor,
             roughness: 0.3,
             isMetallic: false
         )
@@ -252,20 +281,20 @@ struct GameView: View {
         
         let hoverComponent = HoverEffectComponent(.spotlight(
             HoverEffectComponent.SpotlightHoverEffectStyle(
-                color: color, strength: 2.0
+                color: useColor, strength: 2.0
             )
         ))
         
         sphereEntity.components.set(hoverComponent)
         
-        return (sphereEntity, color)
+        return sphereEntity
     }
 }
 
 extension Entity {
-    func explode() {
+    func explode(color: UIColor) {
         // Create explosion particles
-        createExplosionEffect()
+        createExplosionEffect(color: color)
         
         // Remove the original sphere after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -273,7 +302,7 @@ extension Entity {
         }
     }
     
-    func createExplosionEffect() {
+    func createExplosionEffect(color: UIColor) {
         let particleCount = 50
         let explosionForce: Float = 2.0
         
@@ -281,12 +310,7 @@ extension Entity {
             // Create small particle
             let particleMesh = MeshResource.generateSphere(radius: 0.01)
             var particleMaterial = SimpleMaterial()
-            particleMaterial.color = .init(tint: UIColor(
-                red: CGFloat.random(in: 0.5...1.0),
-                green: CGFloat.random(in: 0.0...0.5),
-                blue: CGFloat.random(in: 0.0...0.3),
-                alpha: 1.0
-            ), texture: nil)
+            particleMaterial.color = .init(tint: color, texture: nil)
             
             let particle = ModelEntity(mesh: particleMesh, materials: [particleMaterial])
             

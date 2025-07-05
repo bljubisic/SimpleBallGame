@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import RealityKit
 
 /// Maintains app-wide state
 @MainActor
@@ -33,14 +34,14 @@ struct BallModel {
     let position: SIMD3<Float>
     let pickedUp: Bool
     let color: UIColor
-    
+    let sphere: Entity
 }
 
 extension BallModel {
     static let ballModelPickedUpLens = Lens<BallModel, Bool>(
         get: { $0.pickedUp },
         set: { pickedUp, ballModel in
-            BallModel(id: ballModel.id, position: ballModel.position, pickedUp: pickedUp, color: ballModel.color)
+            BallModel(id: ballModel.id, position: ballModel.position, pickedUp: pickedUp, color: ballModel.color, sphere: ballModel.sphere)
         }
     )
 }
@@ -60,12 +61,41 @@ extension Game {
         self.colors = []
     }
     
+    init (level: AppModel.Level, subLevel:Int, keepTimePerLevel: [String: TimeInterval], colors: [UIColor]) {
+        self.level = level
+        self.subLevel = subLevel
+        self.keptTimePerLevel = keepTimePerLevel
+        self.colors = colors
+    }
+    
     init(level: AppModel.Level, subLevel: Int) {
         self.level = level
         self.subLevel = subLevel
         self.keptTimePerLevel = [:]
         self.colors = []
     }
+}
+extension Game {
+    static let gameLevelLens = Lens<Game, AppModel.Level>(
+        get: { $0.level },
+        set: { level, game in
+            Game(level: level, subLevel: game.subLevel, keepTimePerLevel: [:], colors: [])
+        }
+    )
+    
+    static let gameTimePerLevelLens = Lens<Game, [String: TimeInterval]>(
+        get: { $0.keptTimePerLevel },
+        set: { keptTimePerLevel, game in
+            Game(level: game.level, subLevel: game.subLevel, keepTimePerLevel: keptTimePerLevel, colors: game.colors)
+        }
+    )
+    
+    static let gameSubLevelLens = Lens<Game, Int>(
+        get: { $0.subLevel },
+        set: { subLevel, game in
+            Game(level: game.level, subLevel: subLevel, keepTimePerLevel: game.keptTimePerLevel, colors: game.colors)
+        }
+    )
 }
 
 struct CurrentGameState {
@@ -83,6 +113,22 @@ extension CurrentGameState {
         self.game = game
         self.ballModels = []
     }
+}
+
+extension CurrentGameState {
+    static let currentGameGameLens = Lens<CurrentGameState, Game>(
+        get: { $0.game },
+        set: { game, currentGameState in
+            CurrentGameState(game: game, ballModels: currentGameState.ballModels)
+        }
+    )
+    
+    static let currentGameBallModelsLens = Lens<CurrentGameState, [BallModel]>(
+        get: { $0.ballModels },
+        set: { ballModels, currentGameState in
+            CurrentGameState(game: currentGameState.game, ballModels: ballModels)
+        }
+    )
 }
 
 struct Lens<Whole, Part> {
