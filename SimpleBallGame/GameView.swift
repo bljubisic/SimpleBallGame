@@ -15,6 +15,7 @@ struct GameView: View {
     @State var numberOfBalls: Int = 0
     @State var colors: [UIColor] = []
     @State var spherePositions: [SIMD3<Float>] = []
+    @State var ballModels: [BallModel] = []
     @Binding var selectedLevel: AppModel.Level
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
     @Binding var game: Game
@@ -32,7 +33,8 @@ struct GameView: View {
             currentGame = CurrentGameState(game: game)
             let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[selectedLevel] ?? 1) + currentGame.game.subLevel) - 1
             // Create 10 spheres with random positions
-            currentGame = CurrentGameState.currentGameBallModelsLens.set(createBallModels(for: game.level, and: game.subLevel), currentGame)
+            ballModels = createBallModels(for: game.level, and: game.subLevel)
+            currentGame = CurrentGameState.currentGameBallModelsLens.set(ballModels, currentGame)
             let anchor = AnchorEntity(.head, trackingMode: .once)
             for i in 0..<numberOfBalls  {
                 anchor.addChild(currentGame.ballModels[i].sphere)
@@ -51,6 +53,8 @@ struct GameView: View {
                 
                 content.add(instructions)
             }
+        } update: { content, attachments in
+            
         } attachments: {
             Attachment(id: "Instructions") {
                 VStack {
@@ -77,6 +81,7 @@ struct GameView: View {
                         stopWatch.start()
                     }
                     let name = value.entity.name
+                    print(name, ballModels)
                     let ballModel = currentGame.ballModels.filter{ ballModel in ballModel.id.uuidString == name}.first
                     if var ballModel = ballModel {
                         ballModel = BallModel.ballModelPickedUpLens.set(true, ballModel)
@@ -87,16 +92,19 @@ struct GameView: View {
                             if numberOfBallsLeft == 0 {
                                 print(numberOfBallsLeft, currentGame.game.subLevel)
                                 if currentGame.game.subLevel < 10 {
-                                    let subLevel = game.subLevel + 1
-                                    game = Game.gameSubLevelLens.set(subLevel, game)
-                                    currentGame = CurrentGameState.currentGameGameLens.set(game, CurrentGameState())
-                                    currentGame = CurrentGameState.currentGameBallModelsLens.set(createBallModels(for: game.level, and: game.subLevel), currentGame)
+                                    let subLevel = currentGame.game.subLevel + 1
+                                    game.subLevel = subLevel
+                                    currentGame.game = game
+                                    ballModels = createBallModels(for: game.level, and: game.subLevel)
+                                    currentGame.ballModels = ballModels
                                 } else {
                                     if (currentGame.game.level == .easy) {
                                         let timePerLevel = currentGame.game.keptTimePerLevel
                                         game = Game(level: .medium, subLevel: 1)
-                                        game = Game.gameTimePerLevelLens.set(timePerLevel, game)
-                                        currentGame = CurrentGameState.currentGameBallModelsLens.set(createBallModels(for: game.level, and: game.subLevel), currentGame)
+//                                        game.keptTimePerLevel = timePerLevel
+                                        currentGame.game = game
+                                        ballModels = createBallModels(for: game.level, and: game.subLevel)
+                                        currentGame.ballModels = ballModels
                                     }
                                 }
                             }

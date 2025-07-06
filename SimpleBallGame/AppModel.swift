@@ -32,7 +32,7 @@ let levelMultiplier: [AppModel.Level: Int] = [
 struct BallModel {
     let id: UUID
     let position: SIMD3<Float>
-    let pickedUp: Bool
+    var pickedUp: Bool
     let color: UIColor
     let sphere: Entity
 }
@@ -47,8 +47,8 @@ extension BallModel {
 }
 
 struct Game {
-    let level: AppModel.Level
-    let subLevel: Int
+    var level: AppModel.Level
+    var subLevel: Int
     let keptTimePerLevel: [String: TimeInterval]
     let colors: [UIColor]
 }
