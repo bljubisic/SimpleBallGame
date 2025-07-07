@@ -16,6 +16,7 @@ struct GameView: View {
     @State var colors: [UIColor] = []
     @State var spherePositions: [SIMD3<Float>] = []
     @State var ballModels: [BallModel] = []
+    @State var levelDone: Bool = false
     @Binding var selectedLevel: AppModel.Level
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
     @Binding var game: Game
@@ -36,6 +37,7 @@ struct GameView: View {
             ballModels = createBallModels(for: game.level, and: game.subLevel)
             currentGame = CurrentGameState.currentGameBallModelsLens.set(ballModels, currentGame)
             let anchor = AnchorEntity(.head, trackingMode: .once)
+            anchor.name = "HeadAnchor"
             for i in 0..<numberOfBalls  {
                 anchor.addChild(currentGame.ballModels[i].sphere)
             }
@@ -54,7 +56,22 @@ struct GameView: View {
                 content.add(instructions)
             }
         } update: { content, attachments in
-            
+            if levelDone {
+                let numberOfBalls = (BASE_BALLS_NUM * (levelMultiplier[currentGame.game.level] ?? 1) + currentGame.game.subLevel) - 1
+//                content.entities.remo
+                let anchor = AnchorEntity(.head, trackingMode: .once)
+                for i in 0..<numberOfBalls  {
+                    anchor.addChild(ballModels[i].sphere)
+                }
+                content.add(anchor)
+                if let instructions = attachments.entity(for: "Instructions") {
+                    instructions.position.z -= 1
+                    instructions.position.y += 1.8
+                    instructions.position.x += 0.9
+                    
+                    content.add(instructions)
+                }
+            }
         } attachments: {
             Attachment(id: "Instructions") {
                 VStack {
@@ -77,6 +94,7 @@ struct GameView: View {
             TapGesture()
                 .targetedToAnyEntity()
                 .onEnded { value in
+                    levelDone = false
                     if stopWatch.counter == 0 {
                         stopWatch.start()
                     }
@@ -90,6 +108,7 @@ struct GameView: View {
                             currentGame.ballModels.removeAll(where: { $0.id == ballModel.id })
                             let numberOfBallsLeft = currentGame.ballModels.filter{sphere in sphere.color == textColor}.count
                             if numberOfBallsLeft == 0 {
+                                levelDone = true
                                 print(numberOfBallsLeft, currentGame.game.subLevel)
                                 if currentGame.game.subLevel < 10 {
                                     let subLevel = currentGame.game.subLevel + 1
