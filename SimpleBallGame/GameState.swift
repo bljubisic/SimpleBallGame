@@ -10,7 +10,7 @@ import RealityKit
 
 class GameState: ObservableObject {
     @Published var currentLevel: GameLevel = .easy
-    @Published var currentSubLevel: Int = 0
+    @Published var currentSubLevel: Int = 1
     @Published var currentGame: CurrentGameState = .init()
     
     private var anchorEntity: AnchorEntity?
@@ -18,6 +18,11 @@ class GameState: ObservableObject {
 
     
     var textColor: UIColor = .white
+    
+    init(currentLevel: GameLevel) {
+        self.currentLevel = currentLevel
+        self.currentSubLevel = 1
+    }
     
     enum GameLevel: Int, CaseIterable {
         case easy = 1

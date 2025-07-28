@@ -10,19 +10,7 @@ import RealityKitContent
 
 
 struct GameView: View {
-    @StateObject private var gameState = GameState()
-    
-    @State private var selectedSpheres: Set<String> = []
-    @State var textColor: UIColor = .white
-    @State var numberOfBalls: Int = 0
-    @State var colors: [UIColor] = []
-    @State var spherePositions: [SIMD3<Float>] = []
-    @State var ballModels: [BallModel] = []
-    @State var levelDone: Bool = false
-    @Binding var selectedLevel: AppModel.Level
-    @Environment(\.openImmersiveSpace) var openImmersiveSpace
-    @Binding var game: Game
-    @Binding var currentGame: CurrentGameState
+    @Binding var gameState: GameState
     
     @ObservedObject var stopWatch = StopWatch()
     
@@ -89,7 +77,7 @@ struct GameView: View {
                         Text("Remove all balls with ")
                             .font(.title)
                         Text("this color!!")
-                            .foregroundColor(Color(textColor))
+                            .foregroundColor(Color(gameState.textColor))
                             .font(.title)
                     }
                     .padding()
@@ -111,27 +99,27 @@ struct GameView: View {
     }
 
     
-    func updateSphereAppearance(_ modelEntity: ModelEntity, isSelected: Bool) {
-         if isSelected {
-             // Selected state: brighter, slightly larger, with glow
-             modelEntity.transform.scale = SIMD3<Float>(1.2, 1.2, 1.2)
-
-         } else {
-             // Normal state
-             modelEntity.transform.scale = SIMD3<Float>(1.0, 1.0, 1.0)
-             
-         }
-     }
-    
-    func handleSphereSelection(_ entity: Entity) {
-            
-        // Toggle selection state
-        if selectedSpheres.contains(entity.name) {
-            selectedSpheres.remove(entity.name)
-        } else {
-            selectedSpheres.insert(entity.name)
-        }
-    }
+//    func updateSphereAppearance(_ modelEntity: ModelEntity, isSelected: Bool) {
+//         if isSelected {
+//             // Selected state: brighter, slightly larger, with glow
+//             modelEntity.transform.scale = SIMD3<Float>(1.2, 1.2, 1.2)
+//
+//         } else {
+//             // Normal state
+//             modelEntity.transform.scale = SIMD3<Float>(1.0, 1.0, 1.0)
+//             
+//         }
+//     }
+//    
+//    func handleSphereSelection(_ entity: Entity) {
+//            
+//        // Toggle selection state
+//        if selectedSpheres.contains(entity.name) {
+//            selectedSpheres.remove(entity.name)
+//        } else {
+//            selectedSpheres.insert(entity.name)
+//        }
+//    }
     
     
 }
@@ -221,9 +209,8 @@ extension Entity {
 }
 
 #Preview(windowStyle: .volumetric) {
-    @Previewable @State var selectedLevel: AppModel.Level = .easy
-    @Previewable @State var game: Game = Game(level: .easy, subLevel: 1)
-    @Previewable @State var currentGame: CurrentGameState = CurrentGameState(game: Game(level: .easy, subLevel: 1))
-    GameView(selectedLevel: $selectedLevel, game: $game, currentGame: $currentGame)
+    @Previewable @State var selectedLevel: GameState.GameLevel = .easy
+    @Previewable @State var gameState: GameState = GameState(currentLevel: .easy)
+    GameView(gameState: $gameState)
         .environment(AppModel())
 }
