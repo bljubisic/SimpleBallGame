@@ -10,18 +10,20 @@ import RealityKit
 
 class GameState: ObservableObject {
     @Published var currentLevel: GameLevel = .easy
-    @Published var currentSubLevel: Int = 1
+    @Published var currentSubLevel: Int = 0
     @Published var currentGame: CurrentGameState = .init()
     
     private var anchorEntity: AnchorEntity?
+    var instructionEntity: Entity?
     private var currentEntities: [BallModel] = []
+    private var allEntities: [BallModel] = []
 
     
-    var textColor: UIColor = .white
+    @Published var textColor: UIColor = .white
     
     init(currentLevel: GameLevel) {
         self.currentLevel = currentLevel
-        self.currentSubLevel = 1
+        self.currentSubLevel = 0
     }
     
     enum GameLevel: Int, CaseIterable {
@@ -53,54 +55,76 @@ class GameState: ObservableObject {
     }
     
     func setupScene(content: RealityViewContent) {
-        anchorEntity = AnchorEntity(.head)
+        anchorEntity = AnchorEntity(.head, trackingMode: .once)
         content.add(anchorEntity!)
         
-        addCurrentLevelnbjects()
+        // Create instruction text entity
+        instructionEntity = Entity()
+        instructionEntity?.position = SIMD3(0, 0.3, -1.0)
+        anchorEntity?.addChild(instructionEntity!)
+        
+        addCurrentLevelObjects()
     }
     
     func updateScene(content: RealityViewContent) {
-        // currently not needed
+        // Apply attachment to instruction entity if available
+        if let instructionEntity = instructionEntity {
+            // Try to get the attachment and apply it to our entity
+            for entity in content.entities {
+                if entity.name == "instruction-text" {
+                    // Copy attachment components to our positioned entity
+                    instructionEntity.components = entity.components
+                    break
+                }
+            }
+        }
     }
     
     func handleTap(on entity: Entity) {
         // Check if the tapped entity is our current target
+        entity.removeFromParent()
         if currentEntities.contains(where: { sphere in
             sphere.sphere == entity
         }) {
-            objectTapped()
+            currentEntities.removeAll { ballModel in
+                ballModel.sphere == entity
+            }
+            if currentEntities .isEmpty {
+                levelCleared()
+            }
         }
     }
     
-    private func objectTapped() {
+    private func levelCleared() {
         // Move to next level after delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             if self.currentSubLevel < 10{
                 self.currentSubLevel += 1
-                self.addCurrentLevelnbjects()
+                self.addCurrentLevelObjects()
             } else if self.currentSubLevel == 10 && self.currentLevel != .hard {
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
-                self.addCurrentLevelnbjects()
+                self.addCurrentLevelObjects()
             } else {
                 print("Game over!")
             }
         }
     }
     
-    func addCurrentLevelnbjects() {
-        currentEntities.forEach{ entity in
+    func addCurrentLevelObjects() {
+        allEntities.forEach{ entity in
             entity.sphere.removeFromParent()
         }
-        currentEntities.removeAll()
+        allEntities.removeAll()
         
-        let entities = createObjects(for: currentLevel, and: currentSubLevel)
-        let usedColors: [UIColor] = entities.reduce([]) { result, ballModel in
+        allEntities = createObjects(for: currentLevel, and: currentSubLevel)
+        let usedColors: [UIColor] = allEntities.reduce([]) { result, ballModel in
             result.contains(ballModel.color) ? result : result + [ballModel.color]
         }
         if let firstColor = usedColors.first {
             textColor = firstColor
+            print(textColor.accessibilityName)
         }
-        currentEntities = entities.filter{sphere in sphere.color == textColor}
+        currentEntities = allEntities.filter{sphere in sphere.color == textColor}
     }
     
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
@@ -116,6 +140,7 @@ class GameState: ObservableObject {
             let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color, sphere: sphere)
             currentGame.ballModels.append(ballModel)
             ballModels.append(ballModel)
+            anchorEntity?.addChild(ballModel.sphere)
         }
         
         return ballModels
