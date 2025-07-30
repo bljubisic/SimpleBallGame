@@ -74,7 +74,6 @@ class GameState: ObservableObject {
                 if entity.name == "instruction-text" {
                     // Copy attachment components to our positioned entity
                     instructionEntity.components = entity.components
-                    break
                 }
             }
         }
@@ -199,7 +198,7 @@ class GameState: ObservableObject {
     private func generateNonIntersectingPositions(for numberOfSpheres: Int) -> [SIMD3<Float>] {
         var positions: [SIMD3<Float>] = []
         let sphereRadius: Float = 0.1 // 10cm radius
-        let minDistance = sphereRadius * 2.1 // Minimum distance between sphere centers (with small buffer)
+        let minDistance = sphereRadius * 2 // Minimum distance between sphere centers (with small buffer)
         
         // Position spheres approximately 1 meter in front of user
         // Create a semicircle/hemisphere pattern in front of the head
@@ -221,7 +220,7 @@ class GameState: ObservableObject {
                 newPosition = SIMD3<Float>(
                     Float.random(in: -spreadRadius...spreadRadius), // Left-right
                     Float.random(in: -spreadRadius/2...spreadRadius), // Slightly up-biased
-                    -baseDistance + Float.random(in: -0.2...0.2) // 1m forward ± 20cm
+                    -baseDistance + Float.random(in: -0.4...0.4) // 1m forward ± 20cm
                 )
                 
                 // Check if this position is far enough from all existing spheres
