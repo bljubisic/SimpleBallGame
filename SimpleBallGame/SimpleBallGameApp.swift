@@ -14,7 +14,7 @@ struct SimpleBallGameApp: App {
     @State private var gameImmersionStyle: ImmersionStyle = .mixed
     
     @State var gameState: GameState = GameState(currentLevel: .easy)
-    @State var currentGame: CurrentGameState = CurrentGameState()
+    
     var body: some SwiftUI.Scene {
         WindowGroup(id: "levelSelection") {
             LevelSelectView(selectedLevel: $selectedLevel, gameState: $gameState)

@@ -15,34 +15,34 @@ struct GameView: View {
     @ObservedObject var stopWatch = StopWatch()
     
     var body: some View {
-        let minutes = String(format: "%02d", stopWatch.counter / 60)
-        let seconds = String(format: "%02d", stopWatch.counter % 60)
-        let union = minutes + " : " + seconds
         
-        RealityView { content, attachments in
-            gameState.setupScene(content: content)
-            if let instructions = attachments.entity(for: "Instructions") {
-                instructions.position.z -= 1
-                instructions.position.y += 1.8
-                instructions.position.x += 0.9
+        if gameState.isGameComplete {
+            GameCompleteView(gameState: gameState)
+        } else {
+            RealityView { content, attachments in
+                gameState.setupScene(content: content)
+                if let instructions = attachments.entity(for: "Instructions") {
+                    instructions.position.z -= 1
+                    instructions.position.y += 1.8
+                    instructions.position.x += 0.9
 
-                content.add(instructions)
-            }
-        } update: { content, attachments in
-            gameState.updateScene(content: content)
-        } attachments: {
-            Attachment(id: "Instructions") {
-                InstructionTextView(gameState: gameState)
-            }
-        }
-        .gesture(
-            TapGesture()
-                .targetedToAnyEntity()
-                .onEnded { value in
-                    gameState.handleTap(on: value.entity)
+                    content.add(instructions)
                 }
-        )
-
+            } update: { content, attachments in
+                gameState.updateScene(content: content)
+            } attachments: {
+                Attachment(id: "Instructions") {
+                    InstructionTextView(gameState: gameState)
+                }
+            }
+            .gesture(
+                TapGesture()
+                    .targetedToAnyEntity()
+                    .onEnded { value in
+                        gameState.handleTap(on: value.entity)
+                    }
+            )
+        }
     }
 }
 
