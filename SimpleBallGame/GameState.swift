@@ -9,14 +9,22 @@ import SwiftUI
 import RealityKit
 
 class GameState: ObservableObject {
+    
+    @Environment(\.dismissImmersiveSpace) var closeImmersiveSpace
     @Published var currentLevel: GameLevel = .easy
     @Published var currentSubLevel: Int = 0
+    @Published var isGameComplete = false
     @Published var currentGame: CurrentGameState = .init()
+    @Published var timeRemaining: Double = 10.0
+    @Published var totalScore: Int = 0
+    @Published var isTimerRunning = false
     
     private var anchorEntity: AnchorEntity?
     var instructionEntity: Entity?
+    private var timer: Timer?
     private var currentEntities: [BallModel] = []
     private var allEntities: [BallModel] = []
+    private let initialTime: Double = 10.0
 
     
     @Published var textColor: UIColor = .white
@@ -95,18 +103,67 @@ class GameState: ObservableObject {
     }
     
     private func levelCleared() {
+        stopTimer()
         // Move to next level after delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             if self.currentSubLevel < 10{
                 self.currentSubLevel += 1
                 self.addCurrentLevelObjects()
             } else if self.currentSubLevel == 10 && self.currentLevel != .hard {
+                // Carry over remaining time to next level (with minimum of 5 seconds)
+                let carryOverTime = max(self.timeRemaining, 5.0)
+                self.timeRemaining = carryOverTime + self.initialTime
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
+                self.isGameComplete = true
                 print("Game over!")
             }
         }
+    }
+    
+    func startTimer() {
+        isTimerRunning = true
+        timer?.invalidate()
+        
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            DispatchQueue.main.async {
+                if self.timeRemaining > 0 {
+                    self.timeRemaining -= 0.1
+                } else {
+                    // Time's up - game over
+                    self.timeUp()
+                }
+            }
+        }
+    }
+    
+    func stopTimer() {
+        isTimerRunning = false
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    func timeUp() {
+        stopTimer()
+        isGameComplete = true
+        allEntities.forEach{ entity in
+            entity.sphere.removeFromParent()
+        }
+        allEntities.removeAll()
+        Task {
+            await closeImmersiveSpace()
+        }
+    }
+    
+    func resetGame() {
+        stopTimer()
+        currentLevel = .easy
+        isGameComplete = false
+//        showCelebration = false
+        timeRemaining = initialTime
+        totalScore = 0
+        addCurrentLevelObjects()
     }
     
     func addCurrentLevelObjects() {
@@ -124,6 +181,9 @@ class GameState: ObservableObject {
             print(textColor.accessibilityName)
         }
         currentEntities = allEntities.filter{sphere in sphere.color == textColor}
+        
+        // Start timer for this level
+        startTimer()
     }
     
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
