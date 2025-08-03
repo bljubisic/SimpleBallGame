@@ -147,6 +147,7 @@ class GameState: ObservableObject {
     func timeUp() {
         stopTimer()
         isGameComplete = true
+        print("Time's up! isGameComplete = \(isGameComplete)")
         allEntities.forEach{ entity in
             entity.sphere.removeFromParent()
         }
