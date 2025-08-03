@@ -152,9 +152,6 @@ class GameState: ObservableObject {
             entity.sphere.removeFromParent()
         }
         allEntities.removeAll()
-        Task {
-            await closeImmersiveSpace()
-        }
     }
     
     func resetGame() {

@@ -41,18 +41,18 @@ struct GameView: View {
             )
             
             // Overlay UI for game completion
-            if gameState.isGameComplete {
                 VStack {
                     Spacer()
                     
                     GameCompleteOverlay(gameState: gameState)
                         .padding()
+                        .opacity(gameState.isGameComplete ? 0 : 1)
                     
                     Spacer()
                 }
                 .background(.black.opacity(0.3))
                 .ignoresSafeArea()
-            }
+                
         }
     }
 }
