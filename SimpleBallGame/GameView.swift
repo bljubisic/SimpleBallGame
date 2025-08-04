@@ -52,7 +52,6 @@ struct GameView: View {
                 }
                 .background(.black.opacity(0.3))
                 .ignoresSafeArea()
-                
         }
     }
 }

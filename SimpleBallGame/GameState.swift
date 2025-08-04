@@ -10,7 +10,6 @@ import RealityKit
 
 class GameState: ObservableObject {
     
-    @Environment(\.dismissImmersiveSpace) var closeImmersiveSpace
     @Published var currentLevel: GameLevel = .easy
     @Published var currentSubLevel: Int = 0
     @Published var isGameComplete = false
