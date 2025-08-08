@@ -20,5 +20,51 @@
             landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "9B1D4F80-0280-4C3E-ACBD-F5097B1DEA0F"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SimpleBallGame/GameState.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "94"
+            endingLineNumber = "94"
+            landmarkName = "updateScene(content:attachments:)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "9B1D4F80-0280-4C3E-ACBD-F5097B1DEA0F - c068c29f146dfc87"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SimpleBallGame.GameState.updateScene(content: _RealityKit_SwiftUI.RealityViewContent, attachments: _RealityKit_SwiftUI.RealityViewAttachments) -&gt; ()"
+                  moduleName = "SimpleBallGame.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/gandalf/Developer/SimpleBallGame/SimpleBallGame/GameState.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "94"
+                  endingLineNumber = "94">
+               </Location>
+               <Location
+                  uuid = "9B1D4F80-0280-4C3E-ACBD-F5097B1DEA0F - c068c29f146dfc87"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SimpleBallGame.GameState.updateScene(content: _RealityKit_SwiftUI.RealityViewContent, attachments: _RealityKit_SwiftUI.RealityViewAttachments) -&gt; ()"
+                  moduleName = "SimpleBallGame.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/gandalf/Developer/SimpleBallGame/SimpleBallGame/GameState.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "94"
+                  endingLineNumber = "94">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

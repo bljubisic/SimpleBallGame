@@ -19,7 +19,6 @@ class GameState: ObservableObject {
     @Published var isTimerRunning = false
     
     private var anchorEntity: AnchorEntity?
-    var instructionEntity: Entity?
     private var timer: Timer?
     private var currentEntities: [BallModel] = []
     private var allEntities: [BallModel] = []
@@ -61,28 +60,40 @@ class GameState: ObservableObject {
         }
     }
     
-    func setupScene(content: RealityViewContent) {
+    func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
         content.add(anchorEntity!)
         
-        // Create instruction text entity
-        instructionEntity = Entity()
-        instructionEntity?.position = SIMD3(0, 0.3, -1.0)
-        anchorEntity?.addChild(instructionEntity!)
-        
+        if let instructions = attachments.entity(for: "Instructions") {
+            instructions.position = SIMD3(1, 1.8, -1)
+
+            content.add(instructions)
+        }
+        if let gameComplete = attachments.entity(for: "game-complete")  {
+            gameComplete.position.z -= 1
+            gameComplete.position.y += 2
+            gameComplete.position.x -= 0
+            content.add(gameComplete)
+        }
         addCurrentLevelObjects()
     }
     
-    func updateScene(content: RealityViewContent) {
+    func updateScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         // Apply attachment to instruction entity if available
-        if let instructionEntity = instructionEntity {
+        if let instructions = attachments.entity(for: "Instructions") {
             // Try to get the attachment and apply it to our entity
             for entity in content.entities {
                 if entity.name == "instruction-text" {
                     // Copy attachment components to our positioned entity
-                    instructionEntity.components = entity.components
+                    instructions.components = entity.components
                 }
             }
+        }
+        
+        // Handle game complete overlay
+        if let gameComplete = attachments.entity(for: "game-complete") {
+            gameComplete.position = SIMD3(0, 1.7, -1)
+            content.add(gameComplete)
         }
     }
     

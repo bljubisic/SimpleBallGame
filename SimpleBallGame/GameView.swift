@@ -17,19 +17,17 @@ struct GameView: View {
     var body: some View {
         ZStack {
             RealityView { content, attachments in
-                gameState.setupScene(content: content)
-                if let instructions = attachments.entity(for: "Instructions") {
-                    instructions.position.z -= 1
-                    instructions.position.y += 1.8
-                    instructions.position.x += 0.9
-                    
-                    content.add(instructions)
-                }
+                gameState.setupScene(content: content, attachments: attachments)
             } update: { content, attachments in
-                gameState.updateScene(content: content)
+                print(gameState.isGameComplete)
+                gameState.updateScene(content: content, attachments: attachments)
             } attachments: {
                 Attachment(id: "Instructions") {
                     InstructionTextView(gameState: gameState)
+                }
+                
+                Attachment(id: "game-complete") {
+                    GameCompleteOverlay(gameState: gameState)
                 }
             }
             .gesture(
@@ -39,19 +37,6 @@ struct GameView: View {
                         gameState.handleTap(on: value.entity)
                     }
             )
-            
-            // Overlay UI for game completion
-                VStack {
-                    Spacer()
-                    
-                    GameCompleteOverlay(gameState: gameState)
-                        .padding()
-                        .opacity(gameState.isGameComplete ? 0 : 1)
-                    
-                    Spacer()
-                }
-                .background(.black.opacity(0.3))
-                .ignoresSafeArea()
         }
     }
 }

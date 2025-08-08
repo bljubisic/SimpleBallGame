@@ -61,7 +61,7 @@ struct GameCompleteOverlay: View {
             .background(.ultraThinMaterial)
             .cornerRadius(20)
             .shadow(radius: 10)
-        }  else {
+        } else {
             EmptyView()
         }
     }
