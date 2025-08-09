@@ -12,9 +12,10 @@ class GameState: ObservableObject {
     
     @Published var currentLevel: GameLevel = .easy
     @Published var currentSubLevel: Int = 0
+    @Published var selectedLevel: GameLevel = .easy
     @Published var isGameComplete = false
     @Published var currentGame: CurrentGameState = .init()
-    @Published var timeRemaining: Double = 10.0
+    @Published var timeRemaining: Double = 0
     @Published var totalScore: Int = 0
     @Published var isTimerRunning = false
     
@@ -28,7 +29,7 @@ class GameState: ObservableObject {
     @Published var textColor: UIColor = .white
     
     init(currentLevel: GameLevel) {
-        self.currentLevel = currentLevel
+        self.selectedLevel = currentLevel
         self.currentSubLevel = 0
     }
     
@@ -58,9 +59,65 @@ class GameState: ObservableObject {
                 return 30
             }
         }
+        
+        var timeRemainingPerLevel: Double {
+            switch self {
+            case .easy:
+                return 30.0
+            case .medium:
+                return 20.0
+            case .hard:
+                return 10.0
+            }
+        }
+        
+        var subLevelTimeIncrement: Double {
+            switch self {
+            case .easy:
+                return 20.0
+            case .medium:
+                return 15.0
+            case .hard:
+                return 10.0
+            }
+        }
+        
+        var initialObjectsPerLevel: Int {
+            switch self {
+            case .easy:
+                return 10
+            case .medium:
+                return 15
+            case .hard:
+                return 20
+            }
+        }
+        
+        var colorsPerLevel: Int {
+            switch self {
+            case .easy:
+                return 3
+            case .medium:
+                return 5
+            case .hard:
+                return 9
+            }
+        }
+    
+        var objectsPerLevelIncrement: Int {
+            switch self {
+            case .easy:
+                return 10
+            case .medium:
+                return 12
+            case .hard:
+                return 15
+            }
+        }
     }
     
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
+        self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
         content.add(anchorEntity!)
         
@@ -115,14 +172,15 @@ class GameState: ObservableObject {
     private func levelCleared() {
         stopTimer()
         // Move to next level after delay
+        // Carry over remaining time to next level (with minimum of 5 seconds)
+        let carryOverTime = max(self.timeRemaining, 5.0)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             if self.currentSubLevel < 10{
                 self.currentSubLevel += 1
+                self.timeRemaining = carryOverTime + self.selectedLevel.subLevelTimeIncrement
                 self.addCurrentLevelObjects()
             } else if self.currentSubLevel == 10 && self.currentLevel != .hard {
-                // Carry over remaining time to next level (with minimum of 5 seconds)
-                let carryOverTime = max(self.timeRemaining, 5.0)
-                self.timeRemaining = carryOverTime + self.initialTime
+                self.timeRemaining = carryOverTime + self.selectedLevel.timeRemainingPerLevel
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
@@ -169,7 +227,7 @@ class GameState: ObservableObject {
         currentLevel = .easy
         isGameComplete = false
 //        showCelebration = false
-        timeRemaining = initialTime
+        timeRemaining = self.selectedLevel.timeRemainingPerLevel
         totalScore = 0
         addCurrentLevelObjects()
     }
@@ -197,7 +255,7 @@ class GameState: ObservableObject {
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
         var ballModels: [BallModel] = []
         let colors = generateRandomColors(selectedLevel: level)
-        let numberOfObjects = level.numberOfObjects + subLevel
+        let numberOfObjects = self.selectedLevel.initialObjectsPerLevel + (level != .easy ? self.selectedLevel.objectsPerLevelIncrement : 0) + subLevel
         let positions = generateNonIntersectingPositions(for: numberOfObjects)
         
         for i in 0..<numberOfObjects {
@@ -313,7 +371,7 @@ class GameState: ObservableObject {
         var colors: [UIColor] = []
         let maxAttempts = 10000 // Prevent infinite loops
         let minColorDistance: Float = 0.3 // Minimum distance between colors in RGB space
-        let numberOfColors = selectedLevel.numberOfObjects
+        let numberOfColors = self.selectedLevel.colorsPerLevel + (self.currentLevel != .easy ? self.currentLevel.colorsPerLevel : 0)
         
         while colors.count < numberOfColors {
             var attempts = 0
