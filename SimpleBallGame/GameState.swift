@@ -10,17 +10,16 @@ import RealityKit
 
 class GameState: ObservableObject {
     
-    @Environment(\.dismissImmersiveSpace) var closeImmersiveSpace
     @Published var currentLevel: GameLevel = .easy
     @Published var currentSubLevel: Int = 0
+    @Published var selectedLevel: GameLevel = .easy
     @Published var isGameComplete = false
     @Published var currentGame: CurrentGameState = .init()
-    @Published var timeRemaining: Double = 10.0
+    @Published var timeRemaining: Double = 0
     @Published var totalScore: Int = 0
     @Published var isTimerRunning = false
     
     private var anchorEntity: AnchorEntity?
-    var instructionEntity: Entity?
     private var timer: Timer?
     private var currentEntities: [BallModel] = []
     private var allEntities: [BallModel] = []
@@ -30,7 +29,7 @@ class GameState: ObservableObject {
     @Published var textColor: UIColor = .white
     
     init(currentLevel: GameLevel) {
-        self.currentLevel = currentLevel
+        self.selectedLevel = currentLevel
         self.currentSubLevel = 0
     }
     
@@ -60,31 +59,98 @@ class GameState: ObservableObject {
                 return 30
             }
         }
+        
+        var timeRemainingPerLevel: Double {
+            switch self {
+            case .easy:
+                return 30.0
+            case .medium:
+                return 20.0
+            case .hard:
+                return 10.0
+            }
+        }
+        
+        var subLevelTimeIncrement: Double {
+            switch self {
+            case .easy:
+                return 20.0
+            case .medium:
+                return 15.0
+            case .hard:
+                return 10.0
+            }
+        }
+        
+        var initialObjectsPerLevel: Int {
+            switch self {
+            case .easy:
+                return 10
+            case .medium:
+                return 15
+            case .hard:
+                return 20
+            }
+        }
+        
+        var colorsPerLevel: Int {
+            switch self {
+            case .easy:
+                return 3
+            case .medium:
+                return 5
+            case .hard:
+                return 9
+            }
+        }
+    
+        var objectsPerLevelIncrement: Int {
+            switch self {
+            case .easy:
+                return 10
+            case .medium:
+                return 12
+            case .hard:
+                return 15
+            }
+        }
     }
     
-    func setupScene(content: RealityViewContent) {
+    func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
+        self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
         content.add(anchorEntity!)
         
-        // Create instruction text entity
-        instructionEntity = Entity()
-        instructionEntity?.position = SIMD3(0, 0.3, -1.0)
-        anchorEntity?.addChild(instructionEntity!)
-        
+        if let instructions = attachments.entity(for: "Instructions") {
+            instructions.position = SIMD3(1, 1.8, -1)
+
+            content.add(instructions)
+        }
+        if let gameComplete = attachments.entity(for: "game-complete")  {
+            gameComplete.position.z -= 1
+            gameComplete.position.y += 2
+            gameComplete.position.x -= 0
+            content.add(gameComplete)
+        }
         addCurrentLevelObjects()
     }
     
-    func updateScene(content: RealityViewContent) {
+    func updateScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         // Apply attachment to instruction entity if available
-        if let instructionEntity = instructionEntity {
+        if let instructions = attachments.entity(for: "Instructions") {
             // Try to get the attachment and apply it to our entity
             for entity in content.entities {
                 if entity.name == "instruction-text" {
                     // Copy attachment components to our positioned entity
-                    instructionEntity.components = entity.components
-                    break
+                    instructions.components = entity.components
                 }
             }
+        }
+        
+        // Handle game complete overlay
+        if let gameComplete = attachments.entity(for: "game-complete") {
+            gameComplete.position = SIMD3(0, 1.7, -1)
+            content.add(gameComplete)
         }
     }
     
@@ -106,14 +172,15 @@ class GameState: ObservableObject {
     private func levelCleared() {
         stopTimer()
         // Move to next level after delay
+        // Carry over remaining time to next level (with minimum of 5 seconds)
+        let carryOverTime = max(self.timeRemaining, 5.0)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             if self.currentSubLevel < 10{
                 self.currentSubLevel += 1
+                self.timeRemaining = carryOverTime + self.selectedLevel.subLevelTimeIncrement
                 self.addCurrentLevelObjects()
             } else if self.currentSubLevel == 10 && self.currentLevel != .hard {
-                // Carry over remaining time to next level (with minimum of 5 seconds)
-                let carryOverTime = max(self.timeRemaining, 5.0)
-                self.timeRemaining = carryOverTime + self.initialTime
+                self.timeRemaining = carryOverTime + self.selectedLevel.timeRemainingPerLevel
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
@@ -148,13 +215,11 @@ class GameState: ObservableObject {
     func timeUp() {
         stopTimer()
         isGameComplete = true
+        print("Time's up! isGameComplete = \(isGameComplete)")
         allEntities.forEach{ entity in
             entity.sphere.removeFromParent()
         }
         allEntities.removeAll()
-        Task {
-            await closeImmersiveSpace()
-        }
     }
     
     func resetGame() {
@@ -162,7 +227,7 @@ class GameState: ObservableObject {
         currentLevel = .easy
         isGameComplete = false
 //        showCelebration = false
-        timeRemaining = initialTime
+        timeRemaining = self.selectedLevel.timeRemainingPerLevel
         totalScore = 0
         addCurrentLevelObjects()
     }
@@ -190,7 +255,7 @@ class GameState: ObservableObject {
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
         var ballModels: [BallModel] = []
         let colors = generateRandomColors(selectedLevel: level)
-        let numberOfObjects = level.numberOfObjects + subLevel
+        let numberOfObjects = self.selectedLevel.initialObjectsPerLevel + (level != .easy ? self.selectedLevel.objectsPerLevelIncrement : 0) + subLevel
         let positions = generateNonIntersectingPositions(for: numberOfObjects)
         
         for i in 0..<numberOfObjects {
@@ -259,7 +324,7 @@ class GameState: ObservableObject {
     private func generateNonIntersectingPositions(for numberOfSpheres: Int) -> [SIMD3<Float>] {
         var positions: [SIMD3<Float>] = []
         let sphereRadius: Float = 0.1 // 10cm radius
-        let minDistance = sphereRadius * 2.1 // Minimum distance between sphere centers (with small buffer)
+        let minDistance = sphereRadius * 2 // Minimum distance between sphere centers (with small buffer)
         
         // Position spheres approximately 1 meter in front of user
         // Create a semicircle/hemisphere pattern in front of the head
@@ -281,7 +346,7 @@ class GameState: ObservableObject {
                 newPosition = SIMD3<Float>(
                     Float.random(in: -spreadRadius...spreadRadius), // Left-right
                     Float.random(in: -spreadRadius/2...spreadRadius), // Slightly up-biased
-                    -baseDistance + Float.random(in: -0.2...0.2) // 1m forward ± 20cm
+                    -baseDistance + Float.random(in: -0.4...0.4) // 1m forward ± 20cm
                 )
                 
                 // Check if this position is far enough from all existing spheres
@@ -306,7 +371,7 @@ class GameState: ObservableObject {
         var colors: [UIColor] = []
         let maxAttempts = 10000 // Prevent infinite loops
         let minColorDistance: Float = 0.3 // Minimum distance between colors in RGB space
-        let numberOfColors = selectedLevel.numberOfObjects
+        let numberOfColors = self.selectedLevel.colorsPerLevel + (self.currentLevel != .easy ? self.currentLevel.colorsPerLevel : 0)
         
         while colors.count < numberOfColors {
             var attempts = 0

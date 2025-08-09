@@ -15,24 +15,19 @@ struct GameView: View {
     @ObservedObject var stopWatch = StopWatch()
     
     var body: some View {
-        
-        if gameState.isGameComplete {
-            GameCompleteView(gameState: gameState)
-        } else {
+        ZStack {
             RealityView { content, attachments in
-                gameState.setupScene(content: content)
-                if let instructions = attachments.entity(for: "Instructions") {
-                    instructions.position.z -= 1
-                    instructions.position.y += 1.8
-                    instructions.position.x += 0.9
-
-                    content.add(instructions)
-                }
+                gameState.setupScene(content: content, attachments: attachments)
             } update: { content, attachments in
-                gameState.updateScene(content: content)
+                print(gameState.isGameComplete)
+                gameState.updateScene(content: content, attachments: attachments)
             } attachments: {
                 Attachment(id: "Instructions") {
                     InstructionTextView(gameState: gameState)
+                }
+                
+                Attachment(id: "game-complete") {
+                    GameCompleteOverlay(gameState: gameState)
                 }
             }
             .gesture(
