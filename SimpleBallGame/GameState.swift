@@ -181,6 +181,7 @@ class GameState: ObservableObject {
                 self.addCurrentLevelObjects()
             } else if self.currentSubLevel == 10 && self.currentLevel != .hard {
                 self.timeRemaining = carryOverTime + self.selectedLevel.timeRemainingPerLevel
+                self.currentSubLevel = 0
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
@@ -255,7 +256,10 @@ class GameState: ObservableObject {
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
         var ballModels: [BallModel] = []
         let colors = generateRandomColors(selectedLevel: level)
-        let numberOfObjects = self.selectedLevel.initialObjectsPerLevel + (level != .easy ? self.selectedLevel.objectsPerLevelIncrement : 0) + subLevel
+        var numberOfObjects = self.selectedLevel.initialObjectsPerLevel + subLevel
+        if self.currentSubLevel == 0 {
+            numberOfObjects += (level != .easy ? self.selectedLevel.objectsPerLevelIncrement : 0)
+        }
         let positions = generateNonIntersectingPositions(for: numberOfObjects)
         
         for i in 0..<numberOfObjects {
