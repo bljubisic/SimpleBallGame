@@ -8,6 +8,12 @@ import Foundation
 import SwiftUI
 import RealityKit
 
+struct Score: Codable {
+    let remainingTime: Double
+    let timeStamp: Date
+    let selectedLevel: GameState.GameLevel
+}
+
 class GameState: ObservableObject {
     
     @Published var currentLevel: GameLevel = .easy
@@ -33,7 +39,7 @@ class GameState: ObservableObject {
         self.currentSubLevel = 0
     }
     
-    enum GameLevel: Int, CaseIterable {
+    enum GameLevel: Int, CaseIterable, Codable {
         case easy = 1
         case medium = 2
         case hard = 3
@@ -186,6 +192,11 @@ class GameState: ObservableObject {
                 self.addCurrentLevelObjects()
             } else {
                 self.isGameComplete = true
+                // save the remainingTime as an object within the defaults
+                let score = Score(remainingTime: self.timeRemaining, timeStamp: Date.now, selectedLevel: self.selectedLevel)
+                var scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
+                scores.append(score)
+                UserDefaults.standard.set(scores, forKey: "scores")
                 print("Game over!")
             }
         }
