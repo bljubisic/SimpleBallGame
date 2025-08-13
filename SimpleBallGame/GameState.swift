@@ -24,6 +24,7 @@ class GameState: ObservableObject {
     @Published var timeRemaining: Double = 0
     @Published var totalScore: Int = 0
     @Published var isTimerRunning = false
+    @Published var scores: [Score] = []
     
     private var anchorEntity: AnchorEntity?
     private var timer: Timer?
@@ -37,6 +38,7 @@ class GameState: ObservableObject {
     init(currentLevel: GameLevel) {
         self.selectedLevel = currentLevel
         self.currentSubLevel = 0
+        self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
     }
     
     enum GameLevel: Int, CaseIterable, Codable {
