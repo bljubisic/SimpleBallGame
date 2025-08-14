@@ -127,6 +127,17 @@ class GameState: ObservableObject {
                 return 15
             }
         }
+        
+        var punishTime: Double {
+            switch self {
+            case .easy:
+                return 0.5
+            case .medium:
+                return 1.0
+            case .hard:
+                return 1.5
+            }
+        }
     }
     
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
@@ -179,6 +190,8 @@ class GameState: ObservableObject {
             if currentEntities .isEmpty {
                 levelCleared()
             }
+        } else {
+            self.timeRemaining -= self.selectedLevel.punishTime
         }
     }
     
@@ -198,10 +211,10 @@ class GameState: ObservableObject {
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
-                allEntities.forEach{ entity in
+                self.allEntities.forEach{ entity in
                     entity.sphere.removeFromParent()
                 }
-                allEntities.removeAll()
+                self.allEntities.removeAll()
                 self.isGameComplete = true
                 // save the remainingTime as an object within the defaults
                 let score = Score(remainingTime: self.timeRemaining, timeStamp: Date.now, selectedLevel: self.selectedLevel)

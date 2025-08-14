@@ -9,6 +9,7 @@ import SwiftUI
 struct LevelSelectView: View {
     
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
+    @Environment(\.dismissWindow) var dismissWindow
     @Binding var selectedLevel: GameState.GameLevel
     
     @Binding var gameState: GameState
@@ -26,6 +27,7 @@ struct LevelSelectView: View {
                             selectedLevel = level
                             gameState = GameState(currentLevel: selectedLevel)
                             await openImmersiveSpace(id: "something")
+                            dismissWindow(id: "levelSelection")
                         }
                     }, label: {
                         Text(level.title)
