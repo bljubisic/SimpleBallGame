@@ -6,7 +6,6 @@
 //
 import SwiftUI
 import RealityKit
-import RealityKitContent
 
 
 struct GameView: View {

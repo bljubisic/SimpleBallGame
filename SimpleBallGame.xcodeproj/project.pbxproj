@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		E498241B2E0DB51800A656D0 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = E498241A2E0DB51800A656D0 /* RealityKitContent */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		E498242E2E0DB51900A656D0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -57,7 +53,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E498241B2E0DB51800A656D0 /* RealityKitContent in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,7 +113,6 @@
 			);
 			name = SimpleBallGame;
 			packageProductDependencies = (
-				E498241A2E0DB51800A656D0 /* RealityKitContent */,
 			);
 			productName = SimpleBallGame;
 			productReference = E49824152E0DB51800A656D0 /* SimpleBallGame.app */;
@@ -471,13 +465,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		E498241A2E0DB51800A656D0 /* RealityKitContent */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = RealityKitContent;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E498240D2E0DB51800A656D0 /* Project object */;
 }

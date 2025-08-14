@@ -41,7 +41,12 @@ class GameState: ObservableObject {
         self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
     }
     
-    enum GameLevel: Int, CaseIterable, Codable {
+    enum GameLevel: Int, CaseIterable, Codable, Comparable {
+        
+        static func < (lhs: GameState.GameLevel, rhs: GameState.GameLevel) -> Bool {
+            return lhs.rawValue < rhs.rawValue
+        }
+        
         case easy = 1
         case medium = 2
         case hard = 3
@@ -193,12 +198,16 @@ class GameState: ObservableObject {
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
+                allEntities.forEach{ entity in
+                    entity.sphere.removeFromParent()
+                }
+                allEntities.removeAll()
                 self.isGameComplete = true
                 // save the remainingTime as an object within the defaults
                 let score = Score(remainingTime: self.timeRemaining, timeStamp: Date.now, selectedLevel: self.selectedLevel)
                 var scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
                 scores.append(score)
-                UserDefaults.standard.set(scores, forKey: "scores")
+                UserDefaults.standard.set(try? PropertyListEncoder().encode(scores), forKey: "scores")
                 print("Game over!")
             }
         }
@@ -269,10 +278,20 @@ class GameState: ObservableObject {
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
         var ballModels: [BallModel] = []
         let colors = generateRandomColors(selectedLevel: level)
-        var numberOfObjects = self.selectedLevel.initialObjectsPerLevel + subLevel
-        if self.currentSubLevel == 0 {
-            numberOfObjects += (level != .easy ? self.selectedLevel.objectsPerLevelIncrement : 0)
+        var numberOfObjects: Int = 0
+        if self.currentLevel == .easy {
+            numberOfObjects = self.selectedLevel.initialObjectsPerLevel
         }
+        numberOfObjects += GameLevel.allCases.reduce(0, { partialResult, level in
+            print(self.currentLevel, level, level <= self.currentLevel)
+            var intermediateResult = 0
+            if self.currentLevel != .easy && (level <= self.currentLevel) {
+                intermediateResult = self.selectedLevel.objectsPerLevelIncrement
+            }
+            return partialResult + intermediateResult
+        }) + subLevel
+        
+        print (numberOfObjects, self.currentLevel, self.selectedLevel)
         let positions = generateNonIntersectingPositions(for: numberOfObjects)
         
         for i in 0..<numberOfObjects {
@@ -388,8 +407,20 @@ class GameState: ObservableObject {
         var colors: [UIColor] = []
         let maxAttempts = 10000 // Prevent infinite loops
         let minColorDistance: Float = 0.3 // Minimum distance between colors in RGB space
-        let numberOfColors = self.selectedLevel.colorsPerLevel + (self.currentLevel != .easy ? self.currentLevel.colorsPerLevel : 0)
-        
+        var numberOfColors: Int = 0
+        if self.currentLevel == .easy {
+            numberOfColors = self.selectedLevel.colorsPerLevel
+        }
+        numberOfColors += GameLevel.allCases.reduce(0, { partialResult, level in
+            print(self.currentLevel, level, level <= self.currentLevel)
+            var intermediateResult = 0
+            if self.currentLevel != .easy && (level <= self.currentLevel) {
+                intermediateResult = self.selectedLevel.colorsPerLevel
+            }
+            return partialResult + intermediateResult
+        })
+//        let numberOfColors = self.selectedLevel.colorsPerLevel + (self.currentLevel != .easy ? self.selectedLevel.colorsPerLevel : 0)
+        print("\(numberOfColors) colors for \(self.selectedLevel) with currentLevel \(self.currentLevel).\(self.currentSubLevel)")
         while colors.count < numberOfColors {
             var attempts = 0
             var validColor = false
