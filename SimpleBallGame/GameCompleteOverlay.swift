@@ -9,6 +9,8 @@ import SwiftUI
 // Game Complete Overlay for Immersive Space
 struct GameCompleteOverlay: View {
     @ObservedObject var gameState: GameState
+    @Environment(\.openWindow) var openWindow
+    @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
     
     var body: some View {
         if gameState.isGameComplete {
@@ -51,7 +53,11 @@ struct GameCompleteOverlay: View {
                 .cornerRadius(16)
                 
                 Button("Play Again") {
-                    gameState.resetGame()
+                    Task {
+                        gameState.resetGame()
+                        await dismissImmersiveSpace()
+                        openWindow(id: "levelSelection")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

@@ -263,9 +263,9 @@ class GameState: ObservableObject {
         currentLevel = .easy
         isGameComplete = false
 //        showCelebration = false
-        timeRemaining = self.selectedLevel.timeRemainingPerLevel
+        timeRemaining = 0
         totalScore = 0
-        addCurrentLevelObjects()
+//        addCurrentLevelObjects()
     }
     
     func addCurrentLevelObjects() {
