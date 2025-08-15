@@ -30,8 +30,8 @@
             filePath = "SimpleBallGame/GameState.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "151"
-            endingLineNumber = "151"
+            startingLineNumber = "164"
+            endingLineNumber = "164"
             landmarkName = "updateScene(content:attachments:)"
             landmarkType = "7">
          </BreakpointContent>

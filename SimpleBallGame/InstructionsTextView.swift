@@ -24,8 +24,11 @@ struct InstructionTextView: View {
                     .foregroundColor(timerColor)
                     .monospacedDigit()
             }
-            Spacer()
-            
+            List(gameState.scores, id: \.selectedLevel) { score in
+                Text("Level \(score.selectedLevel) - Score: \(score.remainingTime)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             HStack {
                 Text("Remove all balls with ")
                     .font(.title)
@@ -37,7 +40,7 @@ struct InstructionTextView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .animation(.easeInOut(duration: 0.3), value: gameState.currentLevel)
     }
     

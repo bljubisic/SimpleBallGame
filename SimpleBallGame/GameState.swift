@@ -24,6 +24,7 @@ class GameState: ObservableObject {
     @Published var timeRemaining: Double = 0
     @Published var totalScore: Int = 0
     @Published var isTimerRunning = false
+    @Published var scores: [Score] = []
     
     private var anchorEntity: AnchorEntity?
     private var timer: Timer?
@@ -37,9 +38,15 @@ class GameState: ObservableObject {
     init(currentLevel: GameLevel) {
         self.selectedLevel = currentLevel
         self.currentSubLevel = 0
+        self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
     }
     
-    enum GameLevel: Int, CaseIterable, Codable {
+    enum GameLevel: Int, CaseIterable, Codable, Comparable {
+        
+        static func < (lhs: GameState.GameLevel, rhs: GameState.GameLevel) -> Bool {
+            return lhs.rawValue < rhs.rawValue
+        }
+        
         case easy = 1
         case medium = 2
         case hard = 3
@@ -120,6 +127,17 @@ class GameState: ObservableObject {
                 return 15
             }
         }
+        
+        var punishTime: Double {
+            switch self {
+            case .easy:
+                return 0.5
+            case .medium:
+                return 1.0
+            case .hard:
+                return 1.5
+            }
+        }
     }
     
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
@@ -172,6 +190,8 @@ class GameState: ObservableObject {
             if currentEntities .isEmpty {
                 levelCleared()
             }
+        } else {
+            self.timeRemaining -= self.selectedLevel.punishTime
         }
     }
     
@@ -191,13 +211,16 @@ class GameState: ObservableObject {
                 self.currentLevel = GameLevel(rawValue: self.currentLevel.rawValue + 1)!
                 self.addCurrentLevelObjects()
             } else {
+                self.allEntities.forEach{ entity in
+                    entity.sphere.removeFromParent()
+                }
+                self.allEntities.removeAll()
                 self.isGameComplete = true
                 // save the remainingTime as an object within the defaults
                 let score = Score(remainingTime: self.timeRemaining, timeStamp: Date.now, selectedLevel: self.selectedLevel)
                 var scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
                 scores.append(score)
-                UserDefaults.standard.set(scores, forKey: "scores")
-                print("Game over!")
+                UserDefaults.standard.set(try? PropertyListEncoder().encode(scores), forKey: "scores")
             }
         }
     }
@@ -227,7 +250,6 @@ class GameState: ObservableObject {
     func timeUp() {
         stopTimer()
         isGameComplete = true
-        print("Time's up! isGameComplete = \(isGameComplete)")
         allEntities.forEach{ entity in
             entity.sphere.removeFromParent()
         }
@@ -239,9 +261,9 @@ class GameState: ObservableObject {
         currentLevel = .easy
         isGameComplete = false
 //        showCelebration = false
-        timeRemaining = self.selectedLevel.timeRemainingPerLevel
+        timeRemaining = 0
         totalScore = 0
-        addCurrentLevelObjects()
+//        addCurrentLevelObjects()
     }
     
     func addCurrentLevelObjects() {
@@ -256,7 +278,6 @@ class GameState: ObservableObject {
         }
         if let firstColor = usedColors.first {
             textColor = firstColor
-            print(textColor.accessibilityName)
         }
         currentEntities = allEntities.filter{sphere in sphere.color == textColor}
         
@@ -267,10 +288,18 @@ class GameState: ObservableObject {
     func createObjects(for level: GameLevel, and subLevel: Int) -> [BallModel] {
         var ballModels: [BallModel] = []
         let colors = generateRandomColors(selectedLevel: level)
-        var numberOfObjects = self.selectedLevel.initialObjectsPerLevel + subLevel
-        if self.currentSubLevel == 0 {
-            numberOfObjects += (level != .easy ? self.selectedLevel.objectsPerLevelIncrement : 0)
+        var numberOfObjects: Int = 0
+        if self.currentLevel == .easy {
+            numberOfObjects = self.selectedLevel.initialObjectsPerLevel
         }
+        numberOfObjects += GameLevel.allCases.reduce(0, { partialResult, level in
+            var intermediateResult = 0
+            if self.currentLevel != .easy && (level <= self.currentLevel) {
+                intermediateResult = self.selectedLevel.objectsPerLevelIncrement
+            }
+            return partialResult + intermediateResult
+        }) + subLevel
+        
         let positions = generateNonIntersectingPositions(for: numberOfObjects)
         
         for i in 0..<numberOfObjects {
@@ -386,8 +415,17 @@ class GameState: ObservableObject {
         var colors: [UIColor] = []
         let maxAttempts = 10000 // Prevent infinite loops
         let minColorDistance: Float = 0.3 // Minimum distance between colors in RGB space
-        let numberOfColors = self.selectedLevel.colorsPerLevel + (self.currentLevel != .easy ? self.currentLevel.colorsPerLevel : 0)
-        
+        var numberOfColors: Int = 0
+        if self.currentLevel == .easy {
+            numberOfColors = self.selectedLevel.colorsPerLevel
+        }
+        numberOfColors += GameLevel.allCases.reduce(0, { partialResult, level in
+            var intermediateResult = 0
+            if self.currentLevel != .easy && (level <= self.currentLevel) {
+                intermediateResult = self.selectedLevel.colorsPerLevel
+            }
+            return partialResult + intermediateResult
+        })
         while colors.count < numberOfColors {
             var attempts = 0
             var validColor = false
