@@ -178,9 +178,18 @@ class GameState: ObservableObject {
         }
     }
     
+    func getColorOfEntity(_ entity: Entity) -> UIColor {
+        return self.allEntities.filter { ballModel in
+            ballModel.sphere == entity
+        }.map { ballModel in
+            ballModel.color
+        }[0]
+    }
+    
     func handleTap(on entity: Entity) {
         // Check if the tapped entity is our current target
         entity.removeFromParent()
+
         if currentEntities.contains(where: { sphere in
             sphere.sphere == entity
         }) {
