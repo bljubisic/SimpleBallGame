@@ -18,7 +18,6 @@ struct GameView: View {
             RealityView { content, attachments in
                 gameState.setupScene(content: content, attachments: attachments)
             } update: { content, attachments in
-                print(gameState.isGameComplete)
                 gameState.updateScene(content: content, attachments: attachments)
             } attachments: {
                 Attachment(id: "Instructions") {

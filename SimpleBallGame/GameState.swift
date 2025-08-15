@@ -221,7 +221,6 @@ class GameState: ObservableObject {
                 var scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
                 scores.append(score)
                 UserDefaults.standard.set(try? PropertyListEncoder().encode(scores), forKey: "scores")
-                print("Game over!")
             }
         }
     }
@@ -251,7 +250,6 @@ class GameState: ObservableObject {
     func timeUp() {
         stopTimer()
         isGameComplete = true
-        print("Time's up! isGameComplete = \(isGameComplete)")
         allEntities.forEach{ entity in
             entity.sphere.removeFromParent()
         }
@@ -280,7 +278,6 @@ class GameState: ObservableObject {
         }
         if let firstColor = usedColors.first {
             textColor = firstColor
-            print(textColor.accessibilityName)
         }
         currentEntities = allEntities.filter{sphere in sphere.color == textColor}
         
@@ -296,7 +293,6 @@ class GameState: ObservableObject {
             numberOfObjects = self.selectedLevel.initialObjectsPerLevel
         }
         numberOfObjects += GameLevel.allCases.reduce(0, { partialResult, level in
-            print(self.currentLevel, level, level <= self.currentLevel)
             var intermediateResult = 0
             if self.currentLevel != .easy && (level <= self.currentLevel) {
                 intermediateResult = self.selectedLevel.objectsPerLevelIncrement
@@ -304,7 +300,6 @@ class GameState: ObservableObject {
             return partialResult + intermediateResult
         }) + subLevel
         
-        print (numberOfObjects, self.currentLevel, self.selectedLevel)
         let positions = generateNonIntersectingPositions(for: numberOfObjects)
         
         for i in 0..<numberOfObjects {
@@ -425,15 +420,12 @@ class GameState: ObservableObject {
             numberOfColors = self.selectedLevel.colorsPerLevel
         }
         numberOfColors += GameLevel.allCases.reduce(0, { partialResult, level in
-            print(self.currentLevel, level, level <= self.currentLevel)
             var intermediateResult = 0
             if self.currentLevel != .easy && (level <= self.currentLevel) {
                 intermediateResult = self.selectedLevel.colorsPerLevel
             }
             return partialResult + intermediateResult
         })
-//        let numberOfColors = self.selectedLevel.colorsPerLevel + (self.currentLevel != .easy ? self.selectedLevel.colorsPerLevel : 0)
-        print("\(numberOfColors) colors for \(self.selectedLevel) with currentLevel \(self.currentLevel).\(self.currentSubLevel)")
         while colors.count < numberOfColors {
             var attempts = 0
             var validColor = false
