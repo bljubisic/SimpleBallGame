@@ -24,10 +24,10 @@ struct InstructionTextView: View {
                     .foregroundColor(timerColor)
                     .monospacedDigit()
             }
-            List(gameState.scores, id: \.selectedLevel) { score in
+            List(gameState.scores, id: \.timeStamp) { score in
                 Text("Level \(score.selectedLevel) - Score: \(score.remainingTime)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white)
             }
             HStack {
                 Text("Remove all balls with ")

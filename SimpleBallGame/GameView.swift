@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import RealityKit
+import AVFoundation
 
 
 struct GameView: View {
@@ -34,10 +35,64 @@ struct GameView: View {
                     .targetedToAnyEntity()
                     .onEnded { value in
                         let color = gameState.getColorOfEntity(value.entity)
+                        playBalloonPopSound()
                         createExplosionEffect(at: value.entity, with: color)
                         gameState.handleTap(on: value.entity)
                     }
             )
+        }
+        .onAppear {
+            setupAudioSession()
+        }
+    }
+    
+    private func setupAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to setup audio session: \(error)")
+        }
+    }
+    
+    private func playBalloonPopSound() {
+        // Generate balloon pop sound programmatically using AVAudioEngine
+        let audioEngine = AVAudioEngine()
+        let playerNode = AVAudioPlayerNode()
+        let audioFormat = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
+        
+        // Create a short burst of noise to simulate balloon pop
+        let frameCount = AVAudioFrameCount(0.2 * audioFormat.sampleRate) // 0.2 seconds
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: frameCount) else { return }
+        buffer.frameLength = frameCount
+        
+        // Generate balloon pop sound - quick burst with frequency sweep
+        guard let channelData = buffer.floatChannelData?[0] else { return }
+        
+        for i in 0..<Int(frameCount) {
+            let time = Float(i) / Float(audioFormat.sampleRate)
+            let envelope = exp(-time * 15.0) // Quick decay envelope
+            let frequency = 800.0 * (1.0 - time * 2.0) // Frequency sweep down
+            let noise = Float.random(in: -1...1) * 0.3 // Add some noise
+            let tone = sin(2.0 * Float.pi * frequency * time)
+            channelData[i] = (tone * 0.7 + noise * 0.3) * envelope * 0.8
+        }
+        
+        // Setup and play the sound
+        audioEngine.attach(playerNode)
+        audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: audioFormat)
+        
+        do {
+            try audioEngine.start()
+            playerNode.scheduleBuffer(buffer, at: nil)
+            playerNode.play()
+            
+            // Stop the engine after the sound finishes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                audioEngine.stop()
+            }
+        } catch {
+            print("Failed to play balloon pop sound: \(error)")
         }
     }
     

@@ -143,6 +143,11 @@ class GameState: ObservableObject {
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
+        var scoresData = UserDefaults.standard.object(forKey: "scores")
+        let scores = try? JSONDecoder().decode([Score].self, from: scoresData as! Data)
+        if let scores = scores {
+            self.scores = scores
+        }
         content.add(anchorEntity!)
         
         if let instructions = attachments.entity(for: "Instructions") {
@@ -227,9 +232,19 @@ class GameState: ObservableObject {
                 self.isGameComplete = true
                 // save the remainingTime as an object within the defaults
                 let score = Score(remainingTime: self.timeRemaining, timeStamp: Date.now, selectedLevel: self.selectedLevel)
-                var scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
-                scores.append(score)
-                UserDefaults.standard.set(try? PropertyListEncoder().encode(scores), forKey: "scores")
+                var scoresData = UserDefaults.standard.object(forKey: "scores")
+                var scores = try? JSONDecoder().decode([Score].self, from: scoresData as! Data)
+                if scores == nil {
+                    scores = []
+                }
+                if var scores = scores {
+                    scores.append(score)
+                    scoresData = try? JSONEncoder().encode(scores)
+                    if let scoresData = scoresData {
+                        UserDefaults.standard.set(scoresData, forKey: "scores")
+                    }
+                }
+
             }
         }
     }
@@ -272,6 +287,7 @@ class GameState: ObservableObject {
 //        showCelebration = false
         timeRemaining = 0
         totalScore = 0
+        self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
 //        addCurrentLevelObjects()
     }
     
