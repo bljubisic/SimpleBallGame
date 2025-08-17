@@ -144,9 +144,16 @@ class GameState: ObservableObject {
         self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
         var scoresData = UserDefaults.standard.object(forKey: "scores")
-        let scores = try? JSONDecoder().decode([Score].self, from: scoresData as! Data)
-        if let scores = scores {
-            self.scores = scores
+        do {
+            if let scoresData = scoresData {
+                let scores = try JSONDecoder().decode([Score].self, from: scoresData as! Data)
+                self.scores = scores
+            } else {
+                self.scores = []
+            }
+        } catch {
+            print(error)
+            self.scores = []
         }
         content.add(anchorEntity!)
         

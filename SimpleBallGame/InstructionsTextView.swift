@@ -26,7 +26,7 @@ struct InstructionTextView: View {
             }
             List(gameState.scores, id: \.timeStamp) { score in
                 Text("Level \(score.selectedLevel) - Score: \(score.remainingTime)")
-                    .font(.caption)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
             }
             HStack {
