@@ -1,9 +1,3 @@
----
-date: 2024-06-27 19:34
-description: survey-md or How to Make a Survey Out of Markdown
-tags: Svelte, Markdown, Survey, Typescript, Javascript
----
-
 # Chasing Colors - Developing an Immersive Game
 
 When the challenge of creating an immersive game for Apple Vision Pro came up, I was excited to explore the possibilities of this new platform. The goal was to create a game that would not only be visually stunning but also engaging and interactive, leveraging the unique capabilities of the Vision Pro.
