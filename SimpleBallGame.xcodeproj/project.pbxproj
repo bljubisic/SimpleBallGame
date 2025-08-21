@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E4BE95D12E574D560023DFB5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = E4BE95D02E574D4D0023DFB5 /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		E498242E2E0DB51900A656D0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -20,6 +24,7 @@
 		E49824152E0DB51800A656D0 /* SimpleBallGame.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleBallGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E49824192E0DB51800A656D0 /* RealityKitContent */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = RealityKitContent; sourceTree = "<group>"; };
 		E498242D2E0DB51900A656D0 /* SimpleBallGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SimpleBallGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E4BE95D02E574D4D0023DFB5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -73,6 +78,7 @@
 				E49824182E0DB51800A656D0 /* Packages */,
 				E49824302E0DB51900A656D0 /* SimpleBallGameTests */,
 				E49824162E0DB51800A656D0 /* Products */,
+				E4BE95D02E574D4D0023DFB5 /* README.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -185,6 +191,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E4BE95D12E574D560023DFB5 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
