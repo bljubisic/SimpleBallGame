@@ -32,7 +32,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "176"
             endingLineNumber = "176"
-            landmarkName = "updateScene(content:attachments:)"
+            landmarkName = "setupScene(content:attachments:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

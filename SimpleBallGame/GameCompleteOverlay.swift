@@ -10,7 +10,9 @@ import SwiftUI
 struct GameCompleteOverlay: View {
     @ObservedObject var gameState: GameState
     @Environment(\.openWindow) var openWindow
+    #if os(visionOS)
     @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
+    #endif
     
     var body: some View {
         if gameState.isGameComplete {
@@ -55,8 +57,12 @@ struct GameCompleteOverlay: View {
                 Button("Play Again") {
                     Task {
                         gameState.resetGame()
+                        #if os(visionOS)
                         await dismissImmersiveSpace()
                         openWindow(id: "levelSelection")
+                        #else
+                        // On iOS, simply reset; presenting UI is handled by navigation.
+                        #endif
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -72,3 +78,4 @@ struct GameCompleteOverlay: View {
         }
     }
 }
+

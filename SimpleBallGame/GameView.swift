@@ -14,32 +14,58 @@ struct GameView: View {
     @State private var explosionEntity: Entity?
     
     @ObservedObject var stopWatch = StopWatch()
+    @State private var resetPlacementTrigger = false
     
     var body: some View {
-        ZStack {
-            RealityView { content, attachments in
-                gameState.setupScene(content: content, attachments: attachments)
-            } update: { content, attachments in
-                gameState.updateScene(content: content, attachments: attachments)
-            } attachments: {
-                Attachment(id: "Instructions") {
-                    InstructionTextView(gameState: gameState)
+        Group {
+#if os(visionOS)
+            ZStack {
+                RealityView { content, attachments in
+                    gameState.setupScene(content: content, attachments: attachments)
+                } update: { content, attachments in
+                    gameState.updateScene(content: content, attachments: attachments)
+                } attachments: {
+                    Attachment(id: "Instructions") {
+                        InstructionTextView(gameState: gameState)
+                    }
+                    Attachment(id: "game-complete") {
+                        GameCompleteOverlay(gameState: gameState)
+                    }
                 }
-                
-                Attachment(id: "game-complete") {
-                    GameCompleteOverlay(gameState: gameState)
+                .gesture(
+                    SpatialTapGesture()
+                        .targetedToAnyEntity()
+                        .onEnded { value in
+                            let color = gameState.getColorOfEntity(value.entity)
+                            playBalloonPopSound()
+                            createExplosionEffect(at: value.entity, with: color)
+                            gameState.handleTap(on: value.entity)
+                        }
+                )
+            }
+#else
+            ZStack(alignment: .top) {
+                ARGameView(gameState: $gameState, resetPlacementTrigger: $resetPlacementTrigger)
+                VStack {
+                    HStack {
+                        Text("Tap a plane to place the game")
+                            .padding(8)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(8)
+                        Spacer()
+                        Button(action: { resetPlacementTrigger = true }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .padding(8)
+                        }
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                        .accessibilityLabel("Reset placement")
+                    }
+                    .padding()
+                    Spacer()
                 }
             }
-            .gesture(
-                SpatialTapGesture()
-                    .targetedToAnyEntity()
-                    .onEnded { value in
-                        let color = gameState.getColorOfEntity(value.entity)
-                        playBalloonPopSound()
-                        createExplosionEffect(at: value.entity, with: color)
-                        gameState.handleTap(on: value.entity)
-                    }
-            )
+#endif
         }
         .onAppear {
             setupAudioSession()
@@ -189,12 +215,25 @@ struct GameView: View {
             particle.transform.rotation = currentRotation * additionalRotation
         }
     }
+    
+#if !os(visionOS)
+    // A lightweight UI model for iOS fallback; expects GameState to expose uiEntities and handleUITap.
+#endif
 }
 
 
-#Preview(windowStyle: .volumetric) {
+#if os(visionOS)
+#Preview {
     @Previewable @State var selectedLevel: GameState.GameLevel = .easy
     @Previewable @State var gameState: GameState = GameState(currentLevel: .easy)
     GameView(gameState: $gameState)
         .environment(AppModel())
 }
+#else
+#Preview {
+    @Previewable @State var selectedLevel: GameState.GameLevel = .easy
+    @Previewable @State var gameState: GameState = GameState(currentLevel: .easy)
+    GameView(gameState: $gameState)
+}
+#endif
+

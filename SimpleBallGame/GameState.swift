@@ -15,6 +15,8 @@ struct Score: Codable {
 }
 
 class GameState: ObservableObject {
+
+// Conformance added below via extension to avoid platform issues
     
     @Published var currentLevel: GameLevel = .easy
     @Published var currentSubLevel: Int = 0
@@ -142,8 +144,12 @@ class GameState: ObservableObject {
     
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
+#if os(visionOS)
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
-        var scoresData = UserDefaults.standard.object(forKey: "scores")
+#else
+        anchorEntity = AnchorEntity(world: .zero)
+#endif
+        let scoresData = UserDefaults.standard.object(forKey: "scores")
         do {
             if let scoresData = scoresData {
                 let scores = try JSONDecoder().decode([Score].self, from: scoresData as! Data)
@@ -191,11 +197,7 @@ class GameState: ObservableObject {
     }
     
     func getColorOfEntity(_ entity: Entity) -> UIColor {
-        return self.allEntities.filter { ballModel in
-            ballModel.sphere == entity
-        }.map { ballModel in
-            ballModel.color
-        }[0]
+        return self.allEntities.first(where: { $0.sphere == entity })?.color ?? .white
     }
     
     func handleTap(on entity: Entity) {
@@ -386,13 +388,14 @@ class GameState: ObservableObject {
             sphereEntity.playAnimation(animationResource)
         }
         
+#if os(visionOS)
         let hoverComponent = HoverEffectComponent(.spotlight(
             HoverEffectComponent.SpotlightHoverEffectStyle(
                 color: useColor, strength: 2.0
             )
         ))
-        
         sphereEntity.components.set(hoverComponent)
+#endif
         
         return sphereEntity
     }
@@ -501,3 +504,48 @@ class GameState: ObservableObject {
     }
 
 }
+
+#if !os(visionOS)
+extension GameState: GameStatePopulating {
+    func populateScene(root: AnchorEntity) {
+        // Clear previous state
+        allEntities.forEach { $0.sphere.removeFromParent() }
+        allEntities.removeAll()
+        currentGame.ballModels.removeAll()
+
+        // Generate colors and positions similar to visionOS path
+        let colors = generateRandomColors(selectedLevel: currentLevel)
+        let positions = generateNonIntersectingPositions(for: currentLevel.initialObjectsPerLevel + currentSubLevel)
+
+        for i in 0..<(positions.count) {
+            let color = colors.randomElement() ?? .white
+            let sphere = createSphere(index: i, position: positions[i], useColor: color)
+            let uuid = UUID(uuidString: sphere.name) ?? UUID()
+            let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color, sphere: sphere)
+            currentGame.ballModels.append(ballModel)
+            allEntities.append(ballModel)
+            root.addChild(sphere)
+        }
+
+        // Choose a target color for text
+        let usedColors: [UIColor] = allEntities.reduce([]) { result, ballModel in
+            result.contains(ballModel.color) ? result : result + [ballModel.color]
+        }
+        if let firstColor = usedColors.first { textColor = firstColor }
+        currentEntities = allEntities.filter { $0.color == textColor }
+
+        // Start timer for this level
+        startTimer()
+    }
+
+    // Helper used by ARGameView fallback path (if protocol not used)
+    func initialPositionsForAR() -> [(position: SIMD3<Float>, color: UIColor)] {
+        let count = currentLevel.initialObjectsPerLevel + currentSubLevel
+        let positions = generateNonIntersectingPositions(for: count)
+        let colors = generateRandomColors(selectedLevel: currentLevel)
+        return positions.enumerated().map { index, pos in
+            (position: pos, color: colors.randomElement() ?? .white)
+        }
+    }
+}
+#endif
