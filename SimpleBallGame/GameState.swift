@@ -8,10 +8,107 @@ import Foundation
 import SwiftUI
 import RealityKit
 
+public enum GameLevel: Int, CaseIterable, Codable, Comparable {
+    case easy = 0
+    case medium = 1
+    case hard = 2
+
+    // Comparable conformance for `level <= currentLevel` checks
+    public static func < (lhs: GameLevel, rhs: GameLevel) -> Bool { lhs.rawValue < rhs.rawValue }
+    
+    var title: String {
+        switch self {
+        case .easy:
+            return "Easy"
+        case .medium:
+            return "Medium"
+        case .hard:
+            return "Hard"
+        }
+    }
+    
+    var numberOfObjects: Int {
+        switch self {
+        case .easy:
+            return 10
+        case .medium:
+            return 20
+        case .hard:
+            return 30
+        }
+    }
+    
+    var timeRemainingPerLevel: Double {
+        switch self {
+        case .easy:
+            return 30.0
+        case .medium:
+            return 20.0
+        case .hard:
+            return 10.0
+        }
+    }
+    
+    var subLevelTimeIncrement: Double {
+        switch self {
+        case .easy:
+            return 20.0
+        case .medium:
+            return 15.0
+        case .hard:
+            return 10.0
+        }
+    }
+    
+    var initialObjectsPerLevel: Int {
+        switch self {
+        case .easy:
+            return 10
+        case .medium:
+            return 15
+        case .hard:
+            return 20
+        }
+    }
+    
+    var colorsPerLevel: Int {
+        switch self {
+        case .easy:
+            return 3
+        case .medium:
+            return 5
+        case .hard:
+            return 9
+        }
+    }
+
+    var objectsPerLevelIncrement: Int {
+        switch self {
+        case .easy:
+            return 10
+        case .medium:
+            return 12
+        case .hard:
+            return 15
+        }
+    }
+    
+    var punishTime: Double {
+        switch self {
+        case .easy:
+            return 0.5
+        case .medium:
+            return 1.0
+        case .hard:
+            return 1.5
+        }
+    }
+}
+
 struct Score: Codable {
     let remainingTime: Double
     let timeStamp: Date
-    let selectedLevel: GameState.GameLevel
+    let selectedLevel: GameLevel
 }
 
 class GameState: ObservableObject {
@@ -37,118 +134,12 @@ class GameState: ObservableObject {
     
     @Published var textColor: UIColor = .white
     
-    init(currentLevel: GameLevel) {
-        self.selectedLevel = currentLevel
-        self.currentSubLevel = 0
-        self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
-    }
-    
-    enum GameLevel: Int, CaseIterable, Codable, Comparable {
-        
-        static func < (lhs: GameState.GameLevel, rhs: GameState.GameLevel) -> Bool {
-            return lhs.rawValue < rhs.rawValue
-        }
-        
-        case easy = 1
-        case medium = 2
-        case hard = 3
-        
-        var title: String {
-            switch self {
-            case .easy:
-                return "Easy"
-            case .medium:
-                return "Medium"
-            case .hard:
-                return "Hard"
-            }
-        }
-        
-        var numberOfObjects: Int {
-            switch self {
-            case .easy:
-                return 10
-            case .medium:
-                return 20
-            case .hard:
-                return 30
-            }
-        }
-        
-        var timeRemainingPerLevel: Double {
-            switch self {
-            case .easy:
-                return 30.0
-            case .medium:
-                return 20.0
-            case .hard:
-                return 10.0
-            }
-        }
-        
-        var subLevelTimeIncrement: Double {
-            switch self {
-            case .easy:
-                return 20.0
-            case .medium:
-                return 15.0
-            case .hard:
-                return 10.0
-            }
-        }
-        
-        var initialObjectsPerLevel: Int {
-            switch self {
-            case .easy:
-                return 10
-            case .medium:
-                return 15
-            case .hard:
-                return 20
-            }
-        }
-        
-        var colorsPerLevel: Int {
-            switch self {
-            case .easy:
-                return 3
-            case .medium:
-                return 5
-            case .hard:
-                return 9
-            }
-        }
-    
-        var objectsPerLevelIncrement: Int {
-            switch self {
-            case .easy:
-                return 10
-            case .medium:
-                return 12
-            case .hard:
-                return 15
-            }
-        }
-        
-        var punishTime: Double {
-            switch self {
-            case .easy:
-                return 0.5
-            case .medium:
-                return 1.0
-            case .hard:
-                return 1.5
-            }
-        }
-    }
-    
+    #if os(visionOS)
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
-#if os(visionOS)
+
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
-#else
-        anchorEntity = AnchorEntity(world: .zero)
-#endif
+
         let scoresData = UserDefaults.standard.object(forKey: "scores")
         do {
             if let scoresData = scoresData {
@@ -176,7 +167,16 @@ class GameState: ObservableObject {
         }
         addCurrentLevelObjects()
     }
-    
+#else
+    // Non-visionOS stub so the file compiles on iOS/macOS. Use populateScene(root:) instead.
+    func setupScene() {
+        self.timeRemaining = self.selectedLevel.timeRemainingPerLevel
+        anchorEntity = AnchorEntity(world: .zero)
+        addCurrentLevelObjects()
+    }
+#endif
+
+    #if os(visionOS)
     func updateScene(content: RealityViewContent, attachments: RealityViewAttachments) {
         // Apply attachment to instruction entity if available
         if let instructions = attachments.entity(for: "Instructions") {
@@ -195,9 +195,38 @@ class GameState: ObservableObject {
             content.add(gameComplete)
         }
     }
+#else
+    // Non-visionOS stub for parity. Nothing to update for attachments on non-visionOS.
+    func updateScene() { }
+#endif
     
     func getColorOfEntity(_ entity: Entity) -> UIColor {
         return self.allEntities.first(where: { $0.sphere == entity })?.color ?? .white
+    }
+    
+    // Public accessors for AR interactions
+    func isCurrentTarget(_ entity: Entity) -> Bool {
+        return currentEntities.contains { $0.sphere == entity }
+    }
+    
+    func removeCurrentEntity(_ entity: Entity) {
+        currentEntities.removeAll { $0.sphere == entity }
+    }
+    
+    func removeAllEntity(_ entity: Entity) {
+        allEntities.removeAll { $0.sphere == entity }
+    }
+    
+    func getCurrentEntitiesCount() -> Int {
+        return currentEntities.count
+    }
+    
+    func removeAllEntitiesFromParent() {
+        print("Removing all entities from parent")
+        allEntities.forEach { entity in
+            entity.sphere.removeFromParent()
+        }
+        allEntities.removeAll()
     }
     
     func handleTap(on entity: Entity) {
@@ -291,10 +320,11 @@ class GameState: ObservableObject {
     
     func resetGame() {
         stopTimer()
-        currentLevel = .easy
+        currentLevel = selectedLevel
+        currentSubLevel = 0
         isGameComplete = false
 //        showCelebration = false
-        timeRemaining = 0
+        timeRemaining = selectedLevel.timeRemainingPerLevel
         totalScore = 0
         self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
 //        addCurrentLevelObjects()
@@ -339,7 +369,7 @@ class GameState: ObservableObject {
         for i in 0..<numberOfObjects {
             let color = colors.randomElement() ?? .white
             let sphere = createSphere(index: i, position: positions[i], useColor: color)
-            let uuid = UUID(uuidString: sphere.name)!
+            let uuid = UUID(uuidString: sphere.name) ?? UUID()
             let ballModel = BallModel(id: uuid, position: sphere.position, pickedUp: false, color: color, sphere: sphere)
             currentGame.ballModels.append(ballModel)
             ballModels.append(ballModel)
@@ -400,15 +430,24 @@ class GameState: ObservableObject {
         return sphereEntity
     }
     
-    private func generateNonIntersectingPositions(for numberOfSpheres: Int) -> [SIMD3<Float>] {
+    private func generateNonIntersectingPositions(for numberOfSpheres: Int, isARMode: Bool = false) -> [SIMD3<Float>] {
         var positions: [SIMD3<Float>] = []
         let sphereRadius: Float = 0.1 // 10cm radius
-        let minDistance = sphereRadius * 2 // Minimum distance between sphere centers (with small buffer)
+        let minDistance = sphereRadius * 2.4 // Minimum distance between sphere centers with 20% buffer to prevent intersection
         
-        // Position spheres approximately 1 meter in front of user
-        // Create a semicircle/hemisphere pattern in front of the head
-        let baseDistance: Float = 1.0 // 1 meter forward
-        let spreadRadius: Float = 0.5 // 40cm spread radius around the forward point
+        // Different positioning for AR vs visionOS
+        let baseDistance: Float
+        let spreadRadius: Float
+
+        if isARMode {
+            // AR mode: position spheres close to the anchor point
+            baseDistance = 0.0 // At the anchor
+            spreadRadius = 0.5 // Larger spread for AR placement (50cm) to prevent intersection
+        } else {
+            // visionOS mode: position spheres in front of user
+            baseDistance = 1.0 // 1 meter forward
+            spreadRadius = 0.5 // 50cm spread radius around the forward point
+        }
         
         let maxAttempts = 1000 // Prevent infinite loops
         
@@ -418,15 +457,21 @@ class GameState: ObservableObject {
             var newPosition = SIMD3<Float>(0, 0, 0)
             
             while !validPosition && attempts < maxAttempts {
-                // Generate random position in a hemisphere in front of user
-                // X: left-right spread
-                // Y: up-down spread (slightly biased upward)
-                // Z: forward distance with some variation
-                newPosition = SIMD3<Float>(
-                    Float.random(in: -spreadRadius...spreadRadius), // Left-right
-                    Float.random(in: -spreadRadius/2...spreadRadius), // Slightly up-biased
-                    -baseDistance + Float.random(in: -0.4...0.4) // 1m forward ± 20cm
-                )
+                if isARMode {
+                    // AR mode: Generate positions close to anchor
+                    newPosition = SIMD3<Float>(
+                        Float.random(in: -spreadRadius...spreadRadius), // Left-right
+                        Float.random(in: 0.05...spreadRadius), // Above surface
+                        Float.random(in: -spreadRadius...spreadRadius) // Forward-back
+                    )
+                } else {
+                    // visionOS mode: Generate random position in a hemisphere in front of user
+                    newPosition = SIMD3<Float>(
+                        Float.random(in: -spreadRadius...spreadRadius), // Left-right
+                        Float.random(in: -spreadRadius/2...spreadRadius), // Slightly up-biased
+                        -baseDistance + Float.random(in: -0.4...0.4) // 1m forward ± 20cm
+                    )
+                }
                 
                 // Check if this position is far enough from all existing spheres
                 validPosition = true
@@ -506,16 +551,29 @@ class GameState: ObservableObject {
 }
 
 #if !os(visionOS)
+protocol GameStatePopulating {
+    func populateScene(root: AnchorEntity)
+    func initialPositionsForAR() -> [(position: SIMD3<Float>, color: UIColor)]
+}
+#endif
+
+#if !os(visionOS)
 extension GameState: GameStatePopulating {
     func populateScene(root: AnchorEntity) {
+        // Set the anchor entity for iOS/AR mode
+        self.anchorEntity = root
+
+        // Initialize time remaining for this level
+        timeRemaining = selectedLevel.timeRemainingPerLevel
+
         // Clear previous state
         allEntities.forEach { $0.sphere.removeFromParent() }
         allEntities.removeAll()
         currentGame.ballModels.removeAll()
 
-        // Generate colors and positions similar to visionOS path
+        // Generate colors and positions for AR mode
         let colors = generateRandomColors(selectedLevel: currentLevel)
-        let positions = generateNonIntersectingPositions(for: currentLevel.initialObjectsPerLevel + currentSubLevel)
+        let positions = generateNonIntersectingPositions(for: currentLevel.initialObjectsPerLevel + currentSubLevel, isARMode: true)
 
         for i in 0..<(positions.count) {
             let color = colors.randomElement() ?? .white
@@ -541,7 +599,7 @@ extension GameState: GameStatePopulating {
     // Helper used by ARGameView fallback path (if protocol not used)
     func initialPositionsForAR() -> [(position: SIMD3<Float>, color: UIColor)] {
         let count = currentLevel.initialObjectsPerLevel + currentSubLevel
-        let positions = generateNonIntersectingPositions(for: count)
+        let positions = generateNonIntersectingPositions(for: count, isARMode: true)
         let colors = generateRandomColors(selectedLevel: currentLevel)
         return positions.enumerated().map { index, pos in
             (position: pos, color: colors.randomElement() ?? .white)
@@ -549,3 +607,4 @@ extension GameState: GameStatePopulating {
     }
 }
 #endif
+

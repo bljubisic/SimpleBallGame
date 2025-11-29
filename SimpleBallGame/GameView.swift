@@ -44,25 +44,84 @@ struct GameView: View {
                 )
             }
 #else
-            ZStack(alignment: .top) {
+            ZStack {
                 ARGameView(gameState: $gameState, resetPlacementTrigger: $resetPlacementTrigger)
+
+                // Top UI overlay
                 VStack {
                     HStack {
-                        Text("Tap a plane to place the game")
-                            .padding(8)
-                            .background(.ultraThinMaterial)
-                            .cornerRadius(8)
+                        // Timer display
+                        VStack(spacing: 4) {
+                            Text("TIME")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+
+                            Text(String(format: "%.1f", gameState.timeRemaining))
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(timerColor)
+                                .monospacedDigit()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+
                         Spacer()
+
+                        // Level display
+                        VStack(spacing: 4) {
+                            Text("LEVEL")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+
+                            Text("\(gameState.currentLevel.title) \(gameState.currentSubLevel)")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+
+                        Spacer()
+
+                        // Reset button
                         Button(action: { resetPlacementTrigger = true }) {
                             Image(systemName: "arrow.counterclockwise")
                                 .padding(8)
                         }
                         .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
+                        .clipShape(Circle())
                         .accessibilityLabel("Reset placement")
                     }
                     .padding()
+
                     Spacer()
+
+                    // Bottom instruction
+                    if !gameState.isGameComplete {
+                        HStack {
+                            Text("Tap")
+                                .font(.headline)
+                            Text(getColorName(gameState.textColor))
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color(gameState.textColor))
+                            Text("balls")
+                                .font(.headline)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+                        .padding(.bottom, 40)
+                    }
+                }
+
+                // Game complete overlay
+                if gameState.isGameComplete {
+                    GameCompleteOverlay(gameState: gameState)
                 }
             }
 #endif
@@ -78,6 +137,41 @@ struct GameView: View {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("Failed to setup audio session: \(error)")
+        }
+    }
+
+    private var timerColor: Color {
+        if gameState.timeRemaining > 5.0 {
+            return .green
+        } else if gameState.timeRemaining > 2.0 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
+    private func getColorName(_ color: UIColor) -> String {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+
+        if red > 0.9 && green > 0.9 && blue > 0.9 {
+            return "white"
+        } else if red > 0.8 && green < 0.3 && blue < 0.3 {
+            return "red"
+        } else if green > 0.8 && red < 0.3 && blue < 0.3 {
+            return "green"
+        } else if blue > 0.8 && red < 0.3 && green < 0.3 {
+            return "blue"
+        } else if red > 0.8 && green > 0.8 && blue < 0.3 {
+            return "yellow"
+        } else if red > 0.8 && green < 0.5 && blue > 0.8 {
+            return "purple"
+        } else if red > 0.8 && green > 0.5 && blue < 0.3 {
+            return "orange"
+        } else {
+            return "colored"
         }
     }
     
@@ -224,15 +318,13 @@ struct GameView: View {
 
 #if os(visionOS)
 #Preview {
-    @Previewable @State var selectedLevel: GameState.GameLevel = .easy
-    @Previewable @State var gameState: GameState = GameState(currentLevel: .easy)
+    @Previewable @State var gameState = GameState()
     GameView(gameState: $gameState)
         .environment(AppModel())
 }
 #else
 #Preview {
-    @Previewable @State var selectedLevel: GameState.GameLevel = .easy
-    @Previewable @State var gameState: GameState = GameState(currentLevel: .easy)
+    @Previewable @State var gameState = GameState()
     GameView(gameState: $gameState)
 }
 #endif
