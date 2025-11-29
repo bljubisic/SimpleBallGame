@@ -10,19 +10,26 @@ import RealityKit
 
 @main
 struct SimpleBallGameApp: App {
-    @State var selectedLevel: GameState.GameLevel = .easy
+    @State var selectedLevel: GameLevel = .easy
+#if os(visionOS)
     @State private var gameImmersionStyle: ImmersionStyle = .mixed
+#endif
     
-    @State var gameState: GameState = GameState(currentLevel: .easy)
+    @State var gameState: GameState = GameState()
     
     var body: some SwiftUI.Scene {
         WindowGroup(id: "levelSelection") {
             LevelSelectView(selectedLevel: $selectedLevel, gameState: $gameState)
-        }.windowStyle(.automatic)
+        }
+#if os(macOS) || os(visionOS)
+        .windowStyle(.automatic)
+#endif
         
+#if os(visionOS)
         ImmersiveSpace(id: "something") {
             GameView(gameState: $gameState)
         }
         .immersionStyle(selection: $gameImmersionStyle, in: .mixed)
+#endif
     }
 }
