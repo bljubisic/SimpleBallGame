@@ -16,9 +16,9 @@ struct GameCompleteOverlay: View {
     
     var body: some View {
         if gameState.isGameComplete {
-            VStack(spacing: 20) {
+            VStack(spacing: 10) {
                 Text(gameState.timeRemaining <= 0 ? "⏰" : "🏆")
-                    .font(.system(size: 80))
+                    .font(.system(size: 40))
                 
                 Text(gameState.timeRemaining <= 0 ? "Time's Up!" : "Congratulations!")
                     .font(.largeTitle)
@@ -42,7 +42,7 @@ struct GameCompleteOverlay: View {
                         .foregroundColor(.white.opacity(0.6))
                     
                     Text("\(gameState.timeRemaining)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.yellow)
                         .monospacedDigit()
                     
@@ -69,7 +69,7 @@ struct GameCompleteOverlay: View {
                 .controlSize(.large)
                 .tint(.blue)
             }
-            .padding(30)
+            .padding(10)
             .background(.ultraThinMaterial)
             .cornerRadius(20)
             .shadow(radius: 10)
