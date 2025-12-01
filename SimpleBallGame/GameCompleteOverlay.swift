@@ -10,13 +10,15 @@ import SwiftUI
 struct GameCompleteOverlay: View {
     @ObservedObject var gameState: GameState
     @Environment(\.openWindow) var openWindow
+    #if os(visionOS)
     @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
+    #endif
     
     var body: some View {
         if gameState.isGameComplete {
-            VStack(spacing: 20) {
+            VStack(spacing: 10) {
                 Text(gameState.timeRemaining <= 0 ? "⏰" : "🏆")
-                    .font(.system(size: 80))
+                    .font(.system(size: 40))
                 
                 Text(gameState.timeRemaining <= 0 ? "Time's Up!" : "Congratulations!")
                     .font(.largeTitle)
@@ -40,7 +42,7 @@ struct GameCompleteOverlay: View {
                         .foregroundColor(.white.opacity(0.6))
                     
                     Text("\(gameState.timeRemaining)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.yellow)
                         .monospacedDigit()
                     
@@ -55,15 +57,19 @@ struct GameCompleteOverlay: View {
                 Button("Play Again") {
                     Task {
                         gameState.resetGame()
+                        #if os(visionOS)
                         await dismissImmersiveSpace()
                         openWindow(id: "levelSelection")
+                        #else
+                        // On iOS, simply reset; presenting UI is handled by navigation.
+                        #endif
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
                 .tint(.blue)
             }
-            .padding(30)
+            .padding(10)
             .background(.ultraThinMaterial)
             .cornerRadius(20)
             .shadow(radius: 10)
@@ -72,3 +78,4 @@ struct GameCompleteOverlay: View {
         }
     }
 }
+

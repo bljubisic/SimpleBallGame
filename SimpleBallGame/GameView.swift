@@ -12,34 +12,137 @@ import AVFoundation
 struct GameView: View {
     @Binding var gameState: GameState
     @State private var explosionEntity: Entity?
-    
+
     @ObservedObject var stopWatch = StopWatch()
+    @State private var resetPlacementTrigger = false
+
+    // Observe the gameState to ensure UI updates when @Published properties change
+    @ObservedObject private var observedGameState: GameState
+
+    init(gameState: Binding<GameState>) {
+        self._gameState = gameState
+        self.observedGameState = gameState.wrappedValue
+    }
     
     var body: some View {
-        ZStack {
-            RealityView { content, attachments in
-                gameState.setupScene(content: content, attachments: attachments)
-            } update: { content, attachments in
-                gameState.updateScene(content: content, attachments: attachments)
-            } attachments: {
-                Attachment(id: "Instructions") {
-                    InstructionTextView(gameState: gameState)
+        Group {
+#if os(visionOS)
+            ZStack {
+                RealityView { content, attachments in
+                    gameState.setupScene(content: content, attachments: attachments)
+                } update: { content, attachments in
+                    gameState.updateScene(content: content, attachments: attachments)
+                } attachments: {
+                    Attachment(id: "Instructions") {
+                        InstructionTextView(gameState: gameState)
+                    }
+                    Attachment(id: "game-complete") {
+                        GameCompleteOverlay(gameState: gameState)
+                    }
                 }
-                
-                Attachment(id: "game-complete") {
+                .gesture(
+                    SpatialTapGesture()
+                        .targetedToAnyEntity()
+                        .onEnded { value in
+                            let color = gameState.getColorOfEntity(value.entity)
+                            playBalloonPopSound()
+                            createExplosionEffect(at: value.entity, with: color)
+                            gameState.handleTap(on: value.entity)
+                        }
+                )
+            }
+#else
+            ZStack(alignment: .top) {
+                ARGameView(gameState: $gameState, resetPlacementTrigger: $resetPlacementTrigger)
+
+                // Top UI overlay
+                VStack(spacing: 0) {
+                    // Top bar - Time, Level, Reset
+                    HStack(alignment: .center) {
+                        // Timer display
+                        VStack(spacing: 4) {
+                            Text("TIME")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+
+                            Text(String(format: "%.1f", observedGameState.timeRemaining))
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(timerColor)
+                                .monospacedDigit()
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+
+                        Spacer()
+
+                        // Level display
+                        VStack(spacing: 4) {
+                            Text("LEVEL")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+
+                            Text("\(observedGameState.currentLevel.title) \(observedGameState.currentSubLevel)")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+
+                        Spacer()
+
+                        // Reset button
+                        Button(action: { resetPlacementTrigger = true }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .padding(8)
+                        }
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .accessibilityLabel("Reset placement")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+
+                    Spacer()
+
+                    // Bottom instruction
+                    if !observedGameState.isGameComplete {
+                        HStack(spacing: 4) {
+                            Text("Remove all balls with ")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text("this color")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color(observedGameState.textColor))
+                                .id(observedGameState.colorUpdateTrigger)  // Force re-render when color changes
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                        .onChange(of: observedGameState.colorUpdateTrigger) { oldValue, newValue in
+                            print("UI: colorUpdateTrigger changed from \(oldValue) to \(newValue), new color: \(observedGameState.textColor)")
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .edgesIgnoringSafeArea(.all)
+
+                // Game complete overlay
+                if observedGameState.isGameComplete {
                     GameCompleteOverlay(gameState: gameState)
                 }
             }
-            .gesture(
-                SpatialTapGesture()
-                    .targetedToAnyEntity()
-                    .onEnded { value in
-                        let color = gameState.getColorOfEntity(value.entity)
-                        playBalloonPopSound()
-                        createExplosionEffect(at: value.entity, with: color)
-                        gameState.handleTap(on: value.entity)
-                    }
-            )
+            .ignoresSafeArea()
+#endif
         }
         .onAppear {
             setupAudioSession()
@@ -54,7 +157,17 @@ struct GameView: View {
             print("Failed to setup audio session: \(error)")
         }
     }
-    
+
+    private var timerColor: Color {
+        if observedGameState.timeRemaining > 5.0 {
+            return .green
+        } else if observedGameState.timeRemaining > 2.0 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
     private func playBalloonPopSound() {
         // Generate balloon pop sound programmatically using AVAudioEngine
         let audioEngine = AVAudioEngine()
@@ -189,12 +302,23 @@ struct GameView: View {
             particle.transform.rotation = currentRotation * additionalRotation
         }
     }
+    
+#if !os(visionOS)
+    // A lightweight UI model for iOS fallback; expects GameState to expose uiEntities and handleUITap.
+#endif
 }
 
 
-#Preview(windowStyle: .volumetric) {
-    @Previewable @State var selectedLevel: GameState.GameLevel = .easy
-    @Previewable @State var gameState: GameState = GameState(currentLevel: .easy)
+#if os(visionOS)
+#Preview {
+    @Previewable @State var gameState = GameState()
     GameView(gameState: $gameState)
         .environment(AppModel())
 }
+#else
+#Preview {
+    @Previewable @State var gameState = GameState()
+    GameView(gameState: $gameState)
+}
+#endif
+
