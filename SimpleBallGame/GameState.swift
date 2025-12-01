@@ -124,15 +124,23 @@ class GameState: ObservableObject {
     @Published var totalScore: Int = 0
     @Published var isTimerRunning = false
     @Published var scores: [Score] = []
-    
+    @Published var colorUpdateTrigger: Int = 0  // Forces UI updates when textColor changes
+
     private var anchorEntity: AnchorEntity?
     private var timer: Timer?
     private var currentEntities: [BallModel] = []
     private var allEntities: [BallModel] = []
     private let initialTime: Double = 10.0
 
-    
-    @Published var textColor: UIColor = .white
+
+    var textColor: UIColor = .white {
+        willSet {
+            print("textColor willSet called, new value: \(newValue), on main thread: \(Thread.isMainThread)")
+            // Increment the trigger to force SwiftUI to update
+            colorUpdateTrigger += 1
+            print("colorUpdateTrigger incremented to: \(colorUpdateTrigger + 1)")
+        }
+    }
     
     #if os(visionOS)
     func setupScene(content: RealityViewContent, attachments: RealityViewAttachments) {
@@ -140,16 +148,16 @@ class GameState: ObservableObject {
 
         anchorEntity = AnchorEntity(.head, trackingMode: .once)
 
-        let scoresData = UserDefaults.standard.object(forKey: "scores")
+        let scoresData = UserDefaults.standard.data(forKey: "scores")
         do {
             if let scoresData = scoresData {
-                let scores = try JSONDecoder().decode([Score].self, from: scoresData as! Data)
+                let scores = try JSONDecoder().decode([Score].self, from: scoresData)
                 self.scores = scores
             } else {
                 self.scores = []
             }
         } catch {
-            print(error)
+            print("Error decoding scores: \(error)")
             self.scores = []
         }
         content.add(anchorEntity!)
@@ -270,17 +278,17 @@ class GameState: ObservableObject {
                 self.isGameComplete = true
                 // save the remainingTime as an object within the defaults
                 let score = Score(remainingTime: self.timeRemaining, timeStamp: Date.now, selectedLevel: self.selectedLevel)
-                var scoresData = UserDefaults.standard.object(forKey: "scores")
-                var scores = try? JSONDecoder().decode([Score].self, from: scoresData as! Data)
-                if scores == nil {
-                    scores = []
+
+                // Load existing scores
+                var scores: [Score] = []
+                if let scoresData = UserDefaults.standard.data(forKey: "scores") {
+                    scores = (try? JSONDecoder().decode([Score].self, from: scoresData)) ?? []
                 }
-                if var scores = scores {
-                    scores.append(score)
-                    scoresData = try? JSONEncoder().encode(scores)
-                    if let scoresData = scoresData {
-                        UserDefaults.standard.set(scoresData, forKey: "scores")
-                    }
+
+                // Add new score and save
+                scores.append(score)
+                if let encodedScores = try? JSONEncoder().encode(scores) {
+                    UserDefaults.standard.set(encodedScores, forKey: "scores")
                 }
 
             }
@@ -326,7 +334,13 @@ class GameState: ObservableObject {
 //        showCelebration = false
         timeRemaining = selectedLevel.timeRemainingPerLevel
         totalScore = 0
-        self.scores = UserDefaults.standard.array(forKey: "scores") as? [Score] ?? []
+        // Load scores from UserDefaults
+        if let scoresData = UserDefaults.standard.data(forKey: "scores"),
+           let loadedScores = try? JSONDecoder().decode([Score].self, from: scoresData) {
+            self.scores = loadedScores
+        } else {
+            self.scores = []
+        }
 //        addCurrentLevelObjects()
     }
     
@@ -335,16 +349,20 @@ class GameState: ObservableObject {
             entity.sphere.removeFromParent()
         }
         allEntities.removeAll()
-        
+
         allEntities = createObjects(for: currentLevel, and: currentSubLevel)
         let usedColors: [UIColor] = allEntities.reduce([]) { result, ballModel in
             result.contains(ballModel.color) ? result : result + [ballModel.color]
         }
         if let firstColor = usedColors.first {
-            textColor = firstColor
+            print("Setting textColor to: \(firstColor), on thread: \(Thread.isMainThread)")
+            // Set textColor on main thread to trigger willSet observer
+            DispatchQueue.main.async {
+                self.textColor = firstColor
+            }
+            currentEntities = allEntities.filter{sphere in sphere.color == firstColor}
         }
-        currentEntities = allEntities.filter{sphere in sphere.color == textColor}
-        
+
         // Start timer for this level
         startTimer()
     }
@@ -589,8 +607,14 @@ extension GameState: GameStatePopulating {
         let usedColors: [UIColor] = allEntities.reduce([]) { result, ballModel in
             result.contains(ballModel.color) ? result : result + [ballModel.color]
         }
-        if let firstColor = usedColors.first { textColor = firstColor }
-        currentEntities = allEntities.filter { $0.color == textColor }
+        if let firstColor = usedColors.first {
+            print("Setting textColor to: \(firstColor), on thread: \(Thread.isMainThread)")
+            // Set textColor on main thread to trigger willSet observer
+            DispatchQueue.main.async {
+                self.textColor = firstColor
+            }
+            currentEntities = allEntities.filter { $0.color == firstColor }
+        }
 
         // Start timer for this level
         startTimer()

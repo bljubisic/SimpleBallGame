@@ -34,8 +34,8 @@ struct ARViewContainer: UIViewRepresentable {
         
         // Set session delegate to track plane detection
         arView.session.delegate = context.coordinator
-        
-        // Add tap gesture recognizer
+
+        // Add tap gesture recognizer (only for entity interaction after placement)
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         arView.addGestureRecognizer(tapGesture)
         
@@ -57,7 +57,7 @@ struct ARViewContainer: UIViewRepresentable {
     
     func updateUIView(_ arView: ARView, context: Context) {
         context.coordinator.gameState = gameState
-        
+
         // Handle reset trigger
         if resetPlacementTrigger {
             context.coordinator.resetPlacement()
@@ -65,12 +65,7 @@ struct ARViewContainer: UIViewRepresentable {
                 resetPlacementTrigger = false
             }
         }
-        
-        // Update instruction text if game is placed
-        if context.coordinator.isPlaced {
-            context.coordinator.updateInstructionText()
-        }
-        
+
         // Handle game complete
         if gameState.isGameComplete && context.coordinator.isPlaced {
             context.coordinator.showGameComplete()
@@ -86,8 +81,6 @@ struct ARViewContainer: UIViewRepresentable {
         weak var arView: ARView?
         weak var coachingOverlay: ARCoachingOverlayView?
         var gameAnchor: AnchorEntity?
-        var gameContainer: Entity?
-        var instructionTextEntity: ModelEntity?
         var gameCompleteEntity: ModelEntity?
         var isPlaced = false
         private var previousLevel: GameLevel?
@@ -105,6 +98,14 @@ struct ARViewContainer: UIViewRepresentable {
                 if let planeAnchor = anchor as? ARPlaneAnchor {
                     detectedPlanes.append(planeAnchor)
                     print("Plane detected: \(planeAnchor.alignment.rawValue)")
+
+                    // Automatically place game on first plane detected (horizontal or vertical)
+                    if !isPlaced {
+                        print("Auto-placing game on \(planeAnchor.alignment == .vertical ? "vertical" : "horizontal") plane")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                            self?.autoPlaceGame(on: planeAnchor)
+                        }
+                    }
                 }
             }
         }
@@ -131,34 +132,59 @@ struct ARViewContainer: UIViewRepresentable {
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let arView = arView else { return }
             let location = gesture.location(in: arView)
-            
-            if !isPlaced {
-                // First tap: place the game
-                print("Placing game")
-                placeGame(at: location, in: arView)
-            } else if gameState.isGameComplete {
+
+            if gameState.isGameComplete {
                 // If game is complete, allow restart
                 print("Restarting game")
-                
                 return
-            } else {
-                // Subsequent taps: interact with entities
+            } else if isPlaced {
+                // Interact with entities
                 print("entity tap")
                 handleEntityTap(at: location, in: arView)
             }
         }
         
+        func autoPlaceGame(on planeAnchor: ARPlaneAnchor) {
+            guard !isPlaced, let arView = arView else { return }
+
+            // Use the center of the plane anchor
+            let anchor = AnchorEntity(anchor: planeAnchor)
+            gameAnchor = anchor
+
+            // Add anchor to scene first
+            arView.scene.addAnchor(anchor)
+
+            // Use GameState's populateScene method to set up game objects
+            gameState.populateScene(root: anchor)
+
+            isPlaced = true
+
+            // Track current level
+            previousLevel = gameState.currentLevel
+            previousSubLevel = gameState.currentSubLevel
+
+            // Hide and remove the coaching overlay once game is placed
+            UIView.animate(withDuration: 0.3, animations: {
+                self.coachingOverlay?.alpha = 0
+            }) { _ in
+                self.coachingOverlay?.setActive(false, animated: false)
+                self.coachingOverlay?.removeFromSuperview()
+            }
+
+            print("Game placed automatically on \(planeAnchor.alignment == .vertical ? "vertical" : "horizontal") plane")
+        }
+
         private func inferAlignmentFromRaycastResult(result: ARRaycastResult) -> Bool {
             // Check if the raycast result has an associated anchor
             if let anchor = result.anchor as? ARPlaneAnchor {
                 return anchor.alignment == .vertical
             }
-            
+
             // If no anchor, try to match to a detected plane by proximity
             let resultPos = SIMD3<Float>(result.worldTransform.columns.3.x,
                                          result.worldTransform.columns.3.y,
                                          result.worldTransform.columns.3.z)
-            
+
             if let closest = detectedPlanes.min(by: { a, b in
                 let ap = SIMD3<Float>(a.transform.columns.3.x, a.transform.columns.3.y, a.transform.columns.3.z)
                 let bp = SIMD3<Float>(b.transform.columns.3.x, b.transform.columns.3.y, b.transform.columns.3.z)
@@ -166,7 +192,7 @@ struct ARViewContainer: UIViewRepresentable {
             }) {
                 return closest.alignment == .vertical
             }
-            
+
             // Default to horizontal
             return false
         }
@@ -200,21 +226,10 @@ struct ARViewContainer: UIViewRepresentable {
             
             // Add anchor to scene first
             arView.scene.addAnchor(anchor)
-            
-            // Create visual elements (instruction text) before populating
-            if let frame = arView.session.currentFrame {
-                setupVisualElements(on: anchor, isVertical: isVertical, cameraTransform: frame.camera.transform)
-            } else {
-                // Fallback orientation if no frame is available
-                setupVisualElements(on: anchor, isVertical: isVertical, cameraTransform: matrix_identity_float4x4)
-            }
-            
-            // Use GameState's populateScene method
+
+            // Use GameState's populateScene method to set up game objects
             gameState.populateScene(root: anchor)
-            
-            // Note: Sphere positions are now correctly generated for AR mode
-            // No need to adjust them after creation
-            
+
             isPlaced = true
             
             // Track current level
@@ -231,151 +246,7 @@ struct ARViewContainer: UIViewRepresentable {
 
             print("Game placed successfully using raycast (isVertical: \(isVertical))")
         }
-        
-        func setupVisualElements(on anchor: AnchorEntity, isVertical: Bool, cameraTransform: simd_float4x4) {
-            print("Setting up visual elements on \(isVertical ? "vertical" : "horizontal") plane")
-            
-            // Create a container for UI elements
-            let container = Entity()
-            gameContainer = container
-            
-            // Create instruction text (floating above the game)
-            if let textEntity = createInstructionText() {
-                instructionTextEntity = textEntity
-                
-                if isVertical {
-                    // For vertical planes, position text above and offset along anchor's local forward
-                    textEntity.position = [0, 0.3, 0]
-                    // Compute forward from anchor's orientation (local -Z in RealityKit is often considered forward)
-                    let forward = anchor.transform.matrix.columns.2   // +Z in world
-                    // Push the text slightly off the wall along forward
-                    let forwardOffset: Float = 0.05
-                    textEntity.position += SIMD3<Float>(forward.x, forward.y, forward.z) * forwardOffset
-                    
-                    // Make text face the camera
-                    let cameraPosition = SIMD3<Float>(cameraTransform.columns.3.x,
-                                                       cameraTransform.columns.3.y,
-                                                       cameraTransform.columns.3.z)
-                    let textWorldPos = anchor.convert(position: textEntity.position, to: nil)
-                    let direction = normalize(cameraPosition - textWorldPos)
-                    let rotation = simd_quatf(from: SIMD3<Float>(0, 0, 1), to: direction)
-                    textEntity.orientation = rotation
-                } else {
-                    // For horizontal planes, position above and rotate to be readable from above
-                    textEntity.position = [0, 0.25, 0]
-                    // Rotate to lay flat but readable
-                    textEntity.orientation = simd_quatf(angle: -.pi / 2, axis: SIMD3<Float>(1, 0, 0))
-                }
-                
-                container.addChild(textEntity)
-                print("Added instruction text at position: \(textEntity.position)")
-            } else {
-                print("Failed to create instruction text")
-            }
-            
-            anchor.addChild(container)
-            print("Container has \(container.children.count) children")
-        }
-        
-        // Note: This method is no longer needed as positions are now generated correctly for AR
-        // func adjustSpheresForARPlacement(anchor: AnchorEntity, isVertical: Bool) { ... }
-        
-        func createInstructionText() -> ModelEntity? {
-            let colorName = getColorName(gameState.textColor)
-            let instructionText = "Tap \(colorName) balls"
-            
-            print("Creating instruction text: '\(instructionText)' with color: \(gameState.textColor)")
-            
-            guard let textMesh = try? MeshResource.generateText(
-                instructionText,
-                extrusionDepth: 0.01,
-                font: .systemFont(ofSize: 0.05, weight: .bold),
-                containerFrame: .zero,
-                alignment: .center,
-                lineBreakMode: .byWordWrapping
-            ) else {
-                print("Failed to generate text mesh")
-                return nil
-            }
-            
-            var material = SimpleMaterial()
-            material.color = .init(tint: .white)  // Use white for better visibility
-            material.metallic = 0.5
-            material.roughness = 0.3
-            
-            let textEntity = ModelEntity(mesh: textMesh, materials: [material])
-            textEntity.name = "instruction-text"
-            
-            print("Text entity created successfully")
-            return textEntity
-        }
-        
-        func getColorName(_ color: UIColor) -> String {
-            var red: CGFloat = 0
-            var green: CGFloat = 0
-            var blue: CGFloat = 0
-            color.getRed(&red, green: &green, blue: &blue, alpha: nil)
-            
-            if red > 0.9 && green > 0.9 && blue > 0.9 {
-                return "white"
-            } else if red > 0.8 && green < 0.3 && blue < 0.3 {
-                return "red"
-            } else if green > 0.8 && red < 0.3 && blue < 0.3 {
-                return "green"
-            } else if blue > 0.8 && red < 0.3 && green < 0.3 {
-                return "blue"
-            } else if red > 0.8 && green > 0.8 && blue < 0.3 {
-                return "yellow"
-            } else if red > 0.8 && green < 0.5 && blue > 0.8 {
-                return "purple"
-            } else if red > 0.8 && green > 0.5 && blue < 0.3 {
-                return "orange"
-            } else {
-                return "colored"
-            }
-        }
-        
-        func updateInstructionText() {
-            // Check if level has changed
-            if previousLevel != gameState.currentLevel || previousSubLevel != gameState.currentSubLevel {
-                previousLevel = gameState.currentLevel
-                previousSubLevel = gameState.currentSubLevel
-                
-                print("Level changed, updating instruction text")
-                
-                // Level changed, recreate instruction text
-                guard let instructionTextEntity = instructionTextEntity else {
-                    print("No instruction text entity to update")
-                    return
-                }
-                
-                let colorName = getColorName(gameState.textColor)
-                let instructionText = "Tap \(colorName) balls"
-                
-                guard let textMesh = try? MeshResource.generateText(
-                    instructionText,
-                    extrusionDepth: 0.01,
-                    font: .systemFont(ofSize: 0.05, weight: .bold),
-                    containerFrame: .zero,
-                    alignment: .center,
-                    lineBreakMode: .byWordWrapping
-                ) else {
-                    print("Failed to generate updated text mesh")
-                    return
-                }
-                
-                var material = SimpleMaterial()
-                material.color = .init(tint: .white)
-                material.metallic = 0.5
-                material.roughness = 0.3
-                
-                instructionTextEntity.model?.mesh = textMesh
-                instructionTextEntity.model?.materials = [material]
-                
-                print("Instruction text updated")
-            }
-        }
-        
+
         func handleEntityTap(at location: CGPoint, in arView: ARView) {
             // Perform entity hit test
             let results = arView.hitTest(location)
@@ -472,17 +343,17 @@ struct ARViewContainer: UIViewRepresentable {
                     
                     // Save score
                     let score = Score(remainingTime: self.gameState.timeRemaining, timeStamp: Date.now, selectedLevel: self.gameState.selectedLevel)
-                    var scoresData = UserDefaults.standard.object(forKey: "scores")
-                    var scores = try? JSONDecoder().decode([Score].self, from: scoresData as! Data)
-                    if scores == nil {
-                        scores = []
+
+                    // Load existing scores
+                    var scores: [Score] = []
+                    if let scoresData = UserDefaults.standard.data(forKey: "scores") {
+                        scores = (try? JSONDecoder().decode([Score].self, from: scoresData)) ?? []
                     }
-                    if var scores = scores {
-                        scores.append(score)
-                        scoresData = try? JSONEncoder().encode(scores)
-                        if let scoresData = scoresData {
-                            UserDefaults.standard.set(scoresData, forKey: "scores")
-                        }
+
+                    // Add new score and save
+                    scores.append(score)
+                    if let encodedScores = try? JSONEncoder().encode(scores) {
+                        UserDefaults.standard.set(encodedScores, forKey: "scores")
                     }
                 }
             }
@@ -642,33 +513,8 @@ struct ARViewContainer: UIViewRepresentable {
         }
         
         func showGameComplete() {
-            // Create game complete text if it doesn't exist
-            if gameCompleteEntity == nil {
-                let completeText = "Game Complete!\nTime: \(String(format: "%.1f", gameState.timeRemaining))s"
-                
-                let textMesh = MeshResource.generateText(
-                    completeText,
-                    extrusionDepth: 0.003,
-                    font: .systemFont(ofSize: 0.05, weight: .bold),
-                    containerFrame: .zero,
-                    alignment: .center,
-                    lineBreakMode: .byWordWrapping
-                )
-                
-                var material = SimpleMaterial()
-                material.color = .init(tint: .systemGreen)
-                material.metallic = 0.7
-                material.roughness = 0.2
-                
-                let textEntity = ModelEntity(mesh: textMesh, materials: [material])
-                textEntity.position = [0, 0.5, 0]
-                
-                gameCompleteEntity = textEntity
-                gameContainer?.addChild(textEntity)
-            }
-            
-            // Hide instruction text
-            instructionTextEntity?.isEnabled = false
+            // Game complete UI is handled by GameView overlay
+            // No 3D text needed in AR scene
         }
         
         func resetPlacement() {
@@ -678,8 +524,6 @@ struct ARViewContainer: UIViewRepresentable {
             // Remove anchor and all children
             gameAnchor?.removeFromParent()
             gameAnchor = nil
-            gameContainer = nil
-            instructionTextEntity = nil
             gameCompleteEntity = nil
             isPlaced = false
             previousLevel = nil

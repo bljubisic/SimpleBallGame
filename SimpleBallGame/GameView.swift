@@ -12,9 +12,17 @@ import AVFoundation
 struct GameView: View {
     @Binding var gameState: GameState
     @State private var explosionEntity: Entity?
-    
+
     @ObservedObject var stopWatch = StopWatch()
     @State private var resetPlacementTrigger = false
+
+    // Observe the gameState to ensure UI updates when @Published properties change
+    @ObservedObject private var observedGameState: GameState
+
+    init(gameState: Binding<GameState>) {
+        self._gameState = gameState
+        self.observedGameState = gameState.wrappedValue
+    }
     
     var body: some View {
         Group {
@@ -44,19 +52,20 @@ struct GameView: View {
                 )
             }
 #else
-            ZStack {
+            ZStack(alignment: .top) {
                 ARGameView(gameState: $gameState, resetPlacementTrigger: $resetPlacementTrigger)
 
                 // Top UI overlay
-                VStack {
-                    HStack {
+                VStack(spacing: 0) {
+                    // Top bar - Time, Level, Reset
+                    HStack(alignment: .center) {
                         // Timer display
                         VStack(spacing: 4) {
                             Text("TIME")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
 
-                            Text(String(format: "%.1f", gameState.timeRemaining))
+                            Text(String(format: "%.1f", observedGameState.timeRemaining))
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(timerColor)
@@ -75,7 +84,7 @@ struct GameView: View {
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
 
-                            Text("\(gameState.currentLevel.title) \(gameState.currentSubLevel)")
+                            Text("\(observedGameState.currentLevel.title) \(observedGameState.currentSubLevel)")
                                 .font(.headline)
                                 .fontWeight(.bold)
                         }
@@ -95,35 +104,44 @@ struct GameView: View {
                         .clipShape(Circle())
                         .accessibilityLabel("Reset placement")
                     }
-                    .padding()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
 
                     Spacer()
 
                     // Bottom instruction
-                    if !gameState.isGameComplete {
-                        HStack {
-                            Text("Tap")
+                    if !observedGameState.isGameComplete {
+                        HStack(spacing: 4) {
+                            Text("Remove all balls with ")
                                 .font(.headline)
-                            Text(getColorName(gameState.textColor))
+                                .foregroundColor(.white)
+                            Text("this color")
                                 .font(.headline)
                                 .fontWeight(.bold)
-                                .foregroundColor(Color(gameState.textColor))
-                            Text("balls")
-                                .font(.headline)
+                                .foregroundColor(Color(observedGameState.textColor))
+                                .id(observedGameState.colorUpdateTrigger)  // Force re-render when color changes
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(.ultraThinMaterial)
                         .cornerRadius(12)
-                        .padding(.bottom, 40)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                        .onChange(of: observedGameState.colorUpdateTrigger) { oldValue, newValue in
+                            print("UI: colorUpdateTrigger changed from \(oldValue) to \(newValue), new color: \(observedGameState.textColor)")
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .edgesIgnoringSafeArea(.all)
 
                 // Game complete overlay
-                if gameState.isGameComplete {
+                if observedGameState.isGameComplete {
                     GameCompleteOverlay(gameState: gameState)
                 }
             }
+            .ignoresSafeArea()
 #endif
         }
         .onAppear {
@@ -141,40 +159,15 @@ struct GameView: View {
     }
 
     private var timerColor: Color {
-        if gameState.timeRemaining > 5.0 {
+        if observedGameState.timeRemaining > 5.0 {
             return .green
-        } else if gameState.timeRemaining > 2.0 {
+        } else if observedGameState.timeRemaining > 2.0 {
             return .orange
         } else {
             return .red
         }
     }
 
-    private func getColorName(_ color: UIColor) -> String {
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        color.getRed(&red, green: &green, blue: &blue, alpha: nil)
-
-        if red > 0.9 && green > 0.9 && blue > 0.9 {
-            return "white"
-        } else if red > 0.8 && green < 0.3 && blue < 0.3 {
-            return "red"
-        } else if green > 0.8 && red < 0.3 && blue < 0.3 {
-            return "green"
-        } else if blue > 0.8 && red < 0.3 && green < 0.3 {
-            return "blue"
-        } else if red > 0.8 && green > 0.8 && blue < 0.3 {
-            return "yellow"
-        } else if red > 0.8 && green < 0.5 && blue > 0.8 {
-            return "purple"
-        } else if red > 0.8 && green > 0.5 && blue < 0.3 {
-            return "orange"
-        } else {
-            return "colored"
-        }
-    }
-    
     private func playBalloonPopSound() {
         // Generate balloon pop sound programmatically using AVAudioEngine
         let audioEngine = AVAudioEngine()
