@@ -29,9 +29,9 @@ let levelMultiplier: [AppModel.Level: Int] = [
     .hard: 3
 ]
 
-struct BallModel {
+struct BallModel: Identifiable {
     let id: UUID
-    let position: SIMD3<Float>
+    var position: SIMD3<Float>
     var pickedUp: Bool
     let color: UIColor
     let sphere: Entity
@@ -98,12 +98,10 @@ extension Game {
     )
 }
 
-struct CurrentGameState {
-    var game: Game
-    var ballModels: [BallModel]
-}
-
-extension CurrentGameState {
+class CurrentGameState: ObservableObject {
+    @Published var game: Game
+    @Published var ballModels: [BallModel]
+    
     init() {
         self.game = Game()
         self.ballModels = []
@@ -112,6 +110,11 @@ extension CurrentGameState {
     init(game: Game) {
         self.game = game
         self.ballModels = []
+    }
+    
+    init(game: Game, ballModels: [BallModel]) {
+        self.game = game
+        self.ballModels = ballModels
     }
 }
 
